@@ -1,0 +1,27 @@
+version: "v1"
+default_allow: false
+default_reason: "Denied by ABAC default policy"
+rules:
+  - id: "allow-analyst-read"
+    effect: "allow"
+    action_patterns: ["tool.execute.read_*"]
+    resource_patterns: ["tool:read_*"]
+    required_roles: ["analyst"]
+    context_conditions:
+      deployment_mode: ["prod", "staging"]
+    reason: "Analyst read scope"
+  - id: "require-admin-export"
+    effect: "allow"
+    action_patterns: ["tool.execute.db_export"]
+    resource_patterns: ["tool:db_export"]
+    required_roles: ["admin"]
+    reason: "Admin export scope"
+  - id: "deny-break-glass-non-admin"
+    effect: "deny"
+    action_patterns: ["tool.execute.*"]
+    resource_patterns: ["tool:*"]
+    subject_conditions:
+      tenant_id: "tenant-a"
+    context_conditions:
+      deployment_mode: ["break-glass"]
+    reason: "Break-glass mode requires dedicated admin workflow"

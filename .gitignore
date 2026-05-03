@@ -1,0 +1,134 @@
+# Agentium — public repo .gitignore (aligned with development hygiene)
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+\#*#
+.#*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.tox/
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Model weights / large data (not application package `src/agentium/models/`)
+models/
+!src/agentium/models/
+!src/agentium/models/*.py
+data/
+*.bin
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.gguf
+*.ggml
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.parquet
+*.feather
+*.arrow
+
+# Vector DB local dirs
+chroma/
+chroma.sqlite3
+.qdrant/
+.weaviate/
+.pinecone/
+
+# Runtime / workspace
+artifacts/
+logs/
+*.log
+sessions/
+workspace/
+
+# Secrets & local config
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+secrets.yaml
+secrets.yml
+config.local.yaml
+*.key
+*.pem
+*.cert
+service-account-*.json
+
+# Editors
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vscode/*.code-workspace
+.idea/
+*.iml
+*.ipr
+*.iws
+.ropeproject
+
+# Tests / tooling
+htmlcov/
+.coverage
+junit.xml
+test-results/
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-electron/
+*.local
+
+# Docs site generators
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Misc
+temp/
+tmp/
+*.tmp
+*.temp
+.agentium_data
+_skills_upstream/

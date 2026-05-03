@@ -1,0 +1,5 @@
+# Paper REPO: "no governance" baseline — permissive default (not for production).
+version: paper-none
+default_decision: allow
+default_reason: paper baseline allow-all policy
+rules: []

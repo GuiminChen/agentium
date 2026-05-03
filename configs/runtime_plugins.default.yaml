@@ -1,0 +1,22 @@
+# Agentium runtime plugins — single source of truth for orchestration, memory, evolution.
+# Override path via AGENTIUM_PLUGINS_CONFIG. Secrets: use *_from_env only (never commit keys).
+
+orchestration:
+  backend: native
+  # langgraph: reserved for future structured options
+  langgraph: {}
+
+memory:
+  backend: memory
+  # Relative paths resolve under AppSettings.data_dir unless absolute.
+  sqlite_relative_path: "memory.sqlite"
+  mem0:
+    api_key_from_env: "MEM0_API_KEY"
+    base_url: ""
+    collection: ""
+
+evolution:
+  plugin: native
+  http_enabled: false
+  hermes_class:
+    max_proposals_per_invocation: 8

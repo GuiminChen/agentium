@@ -1,0 +1,5 @@
+# Paper REPO: "full governance" — default deny with no allow rules (deny-all).
+version: paper-full
+default_decision: deny
+default_reason: paper full deny-all
+rules: []

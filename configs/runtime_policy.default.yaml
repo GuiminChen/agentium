@@ -1,0 +1,52 @@
+version: v1-default
+default_decision: deny
+default_reason: denied by default until explicit rules are configured
+rules:
+  - id: allow-builtin-low-risk
+    decision: allow
+    reason: built-in stubs for smoke tests and local dev (see agentium.tools.builtin_defaults)
+    tools:
+      - echo_tool
+      - noop
+      - calculator
+      - hash_text
+      - word_count
+      - json_parse
+      - timestamp_now
+      - random_choice
+      - string_reverse
+      - list_files_stub
+      - env_snapshot_stub
+      - http_probe_stub
+      - delay_ms
+      - identity_pass
+      - merge_dict
+      - pick_field
+      - template_render_stub
+      - format_table_stub
+      - summarize_stub
+      - alert_stub
+    roles: []
+  - id: allow-web-search-default-roles
+    decision: allow
+    reason: stub web search for analyst-style workflows
+    tools: [web_search]
+    roles: [user, admin, analyst, operator, tenant_admin, platform_ops]
+  - id: allow-skill-tools
+    decision: allow
+    reason: skill materialization and invoke tools (skill_invoke also requires pack allowlist + sandbox)
+    tools: [skill_run, skill_invoke]
+    roles: [user, admin, analyst, operator, tenant_admin, platform_ops]
+
+  - id: skill-content-any-standard-roles
+    decision: allow
+    reason: allow loading any skill instructions for default roles (narrow skills list in prod)
+    skills: ["*"]
+    roles: [user, admin, analyst, operator, tenant_admin, platform_ops]
+
+  - id: skill-script-wildcard-trusted-roles
+    decision: allow
+    reason: allow scripts that pass pack agentium_script_allowlist.txt (trusted operators only)
+    skills: ["*"]
+    skill_script_paths: ["*"]
+    roles: [admin, platform_ops, tenant_admin]

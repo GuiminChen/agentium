@@ -1,0 +1,229 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "sessions": "Sessions",
+    "approvals": "Approvals",
+    "budget": "Budget",
+    "turnDebug": "Turn debug",
+    "policy": "Policy",
+    "decisionChain": "Decision chain",
+    "background": "Background",
+    "deepResearch": "Deep research",
+    "workflowIde": "Workflow IDE",
+    "coordination": "Coordination",
+    "eval": "Eval gates",
+    "compliance": "Compliance",
+    "connectors": "Connectors",
+    "governance": "Governance",
+    "settings": "Settings",
+    "more": "More",
+    "workspace": "Workspace",
+    "toolsCatalog": "Tools"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Error",
+    "copy": "Copy",
+    "submit": "Submit",
+    "reload": "Reload"
+  },
+  "contract": {
+    "violationTitle": "Contract warning",
+    "violationDetail": "Some items are missing required correlation fields.",
+    "ob03NoTraceTitle": "Observability: incomplete correlation",
+    "ob03NoTraceBody": "This run has timeline events but no trace_id was found in payloads. External links and trace-based triage may be incomplete—verify server audit payloads (PRD Ob-03).",
+    "auditPayloadTitle": "Audit payload correlation",
+    "auditPayloadDetail": "Some events are missing correlation keys in payload (e.g. trace_id). Cross-navigation may be degraded."
+  },
+  "approval": {
+    "argsFingerprint": "Args fingerprint",
+    "copyFingerprint": "Copy",
+    "openRunDetail": "Open run",
+    "runLinkAria": "Open run detail for this approval",
+    "pendingListAria": "Pending approvals"
+  },
+  "policyRelease": {
+    "wizardTitle": "Policy release (HMAC bundle)",
+    "wizardHelp": "Signature uses the same canonical JSON as the Python signer: sorted keys, no extra spaces, HMAC-SHA256 over {\"version\",\"policy_document\"}. Matches AGENTIUM_POLICY_RELEASE_HMAC_SECRET on the server.",
+    "version": "Bundle version",
+    "documentJson": "policy_document (JSON)",
+    "metadataJson": "metadata (JSON object)",
+    "hmacSecret": "HMAC secret (local only — do not commit)",
+    "submit": "Submit release (POST /v1/policies/releases)",
+    "invalidJsonDocument": "policy_document must be valid JSON object",
+    "invalidJsonMetadata": "metadata must be valid JSON object",
+    "secretRequired": "HMAC secret is required to sign",
+    "colId": "release_id",
+    "colVersion": "version",
+    "colStatus": "status",
+    "colTenant": "tenant_id",
+    "noReleases": "No policy releases returned yet.",
+    "detailTitle": "Selected release",
+    "approveLegend": "Approve (POST …/approve)",
+    "activateLegend": "Activate tenants (POST …/activate)",
+    "rollbackLegend": "Rollback (POST …/rollback)",
+    "approve": "Approve",
+    "activate": "Activate",
+    "rollback": "Rollback",
+    "tenantIdsHint": "tenant_ids (comma- or newline-separated)",
+    "selectRelease": "Select a release from the table first.",
+    "tenantsRequired": "Enter at least one tenant_id to activate."
+  },
+  "auditTable": {
+    "colTime": "timestamp",
+    "colType": "event_type",
+    "colActions": "copy",
+    "copyTrace": "Copy trace_id",
+    "copyToolUse": "Copy tool_use_id"
+  },
+  "runDetail": {
+    "timelineLabel": "Run timeline",
+    "toolUseId": "tool_use_id",
+    "rawTimeline": "Raw timeline JSON",
+    "copyRunId": "Copy run_id",
+    "copyTraceId": "Copy trace_id",
+    "observability": "Observability"
+  },
+  "evalGates": {
+    "runButton": "Run release gates",
+    "overallPass": "All gates passed",
+    "overallFail": "One or more gates failed — not releasable",
+    "gateName": "Gate",
+    "colResult": "Result",
+    "passed": "OK",
+    "failed": "Fail",
+    "duration": "ms",
+    "expandDetail": "Detail / error",
+    "noDetail": "No extra detail."
+  },
+  "overview": {
+    "healthCard": "Health",
+    "readyCard": "Ready",
+    "versionCard": "Backend version",
+    "pendingTitle": "Pending approvals",
+    "failedRunsTitle": "Recent runs (heuristic failure)",
+    "failedRunsHint": "Filtered when last audit event type contains fail/blocked/error.",
+    "budgetTitle": "Budget (tenant summary)",
+    "openBudget": "Open budget →"
+  },
+  "decisionChain": {
+    "eventType": "event_type",
+    "runId": "run_id (optional)",
+    "tenantId": "tenant_id (optional)"
+  },
+  "policyChain": {
+    "effectiveTitle": "Effective policy (snapshot)",
+    "effectiveHint": "Read-only bundle from GET /v1/policy/effective. Per-request outcomes remain in audit events (e.g. policy_decision).",
+    "timelineTitle": "Audit timeline",
+    "timelineHint": "Filter audit events; use policy_decision with an optional run_id to align with the snapshot."
+  },
+  "compliancePage": {
+    "eventType": "event_type (exact)",
+    "runId": "run_id (optional)",
+    "tenantId": "tenant_id (optional)",
+    "hint": "Server uses exact event_type match; adjust to known audit labels from your deployment."
+  },
+  "auditExport": {
+    "title": "Redacted audit export (GET /v1/audit/export)",
+    "runId": "run_id",
+    "redact": "Redact payload values",
+    "download": "Download JSON",
+    "error": "Export failed",
+    "needCap": "Requires export.audit.redacted"
+  },
+  "deepResearch": {
+    "postRun": "Start research (POST /v1/research/run)",
+    "reloadSnapshot": "Reload snapshot (GET)",
+    "workflowTitle": "Workflow progress",
+    "pendingNode": "Pending node",
+    "specProgress": "Spec nodes"
+  },
+  "workflowIde": {
+    "runIdLabel": "run_id",
+    "enterRunId": "Enter a run_id to load GET /v1/workflows/{run_id}.",
+    "noSpecNodes": "Server returned a workflow payload but spec_nodes is missing or empty—no DAG to draw (C-01 partial).",
+    "apiNote": "Read-only graph from the control plane; compare with GET /v1/task-graph/{run_id} if configured.",
+    "rawResponse": "Raw JSON",
+    "graphTitle": "DAG (spec_nodes)"
+  },
+  "coordination": {
+    "artifactsTitle": "Artifacts",
+    "copyId": "Copy artifact_id",
+    "deepLink": "Coordination for this run"
+  },
+  "background": {
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop",
+    "stopConfirm": "Stop the background daemon? This is idempotent but halts active work.",
+    "statusHint": "Parsed hints from status JSON (when present)."
+  },
+  "governancePage": {
+    "intro": "Domain packs are loaded server-side from configured directories. There is no binary download API in the control plane yet—use repository docs and your deployment manifest.",
+    "docFixedIncome": "Fixed-income domain narrative (doc)",
+    "docLoader": "Codemap: domain_pack_loader",
+    "manifestFile": "Pack root must include domain_pack.yaml (see DomainPackLoader).",
+    "envHint": "Paths and signing are configured via your runtime settings / secret store—not exposed here."
+  },
+  "manifest": {
+    "advancedTitle": "Advanced: run_manifest (optional, PRD RM-01)",
+    "optionalHint": "When set, must be a JSON object aligned with server RunManifest policy. Leave empty to omit. Errors such as missing manifest or SHA mismatch surface as API JSON (RM-02)—use the response detail below.",
+    "invalidJson": "run_manifest must be valid JSON object or empty",
+    "placeholder": "{ \"profile\": \"dev\", \"build_id\": \"local\", \"declared_tools\": [\"echo_tool\"] }"
+  },
+  "toolsCatalog": {
+    "title": "Tool catalog",
+    "hint": "Read-only list from GET /v1/tools (tools.read). Use Turn debug or Workspace to invoke tools.",
+    "colName": "Name",
+    "colRisk": "Risk",
+    "colCaps": "Capabilities",
+    "colContract": "Contract",
+    "countLabel": "Total: {{count}}"
+  },
+  "sessionsPage": {
+    "title": "Sessions",
+    "hint": "Recent runs from GET /v1/runs/recent. Open workspace to send turns on a run_id, or inspect the timeline.",
+    "colRunId": "run_id",
+    "colLastEvent": "Last event",
+    "colLastTs": "Last timestamp",
+    "colActions": "Actions",
+    "openWorkspace": "Chat",
+    "openRun": "Timeline",
+    "empty": "No runs returned yet.",
+    "newChat": "New workspace",
+    "needCap": "Capability runs.read is required to list sessions."
+  },
+  "workspace": {
+    "title": "Session workspace (light)",
+    "hint": "Each message sends POST /v1/turn with echo_tool and your text as args. Approvals: open the approval hub when status is pending_approval.",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "clear": "Clear history",
+    "sessionRunId": "Session run_id",
+    "openApprovals": "Open approvals",
+    "assistantPending": "Pending approval — resolve in approval hub.",
+    "assistantCompleted": "Turn completed.",
+    "rawResponse": "Response",
+    "dispositionLabel": "Message disposition (PRD §3.5.1)",
+    "tierLabel": "MCP execution tier (PRD §3.9.2)",
+    "dispositionCollect": "collect",
+    "dispositionFollowup": "followup",
+    "dispositionSteer": "steer",
+    "tierDirect": "direct-tool",
+    "tierCodeMcp": "code-exec-mcp",
+    "referencesHeading": "References (SourceRef shape)",
+    "memoryFootnote": "Tenant-visible memory / preference CRUD over HTTP is not in this build (PRD §3.10); use audit and governance flows where configured."
+  },
+  "settings": {
+    "language": "Language",
+    "observabilityLinks": "Observability links (server)",
+    "runManifestRm01": "When issuing a turn, paste the same JSON as <code>run_manifest</code> in advanced options on <turnDebug>Turn debug</turnDebug> or <workspace>Workspace</workspace>.",
+    "applyReload": "Apply & reload profile",
+    "applyRunning": "Calling GET /v1/me…",
+    "applyOk": "Profile refreshed from GET /v1/me; capabilities updated.",
+    "applyNeedIdentity": "Fill tenant + user (header mode) or bearer token, then click again.",
+    "apiBaseHint": "For local dev, leave this empty: requests use same-origin /v1 and the Vite proxy (identity headers stay reliable). If you set an absolute URL like http://127.0.0.1:8765, the browser calls the control plane cross-origin; without CORS allowing X-Tenant-Id / X-User-Id / X-Role you may see missing_identity_headers or failed fetches.",
+    "observabilityCorsHint": "If you still see missing_identity_headers with tenant/user filled: clear API base to use the proxy, or enable CORS on the control plane.",
+    "applyNetworkFailed": "\"Failed to fetch\" usually means the browser never got an HTTP response. Check: (1) control plane is listening (e.g. agentium serve); (2) prefer leaving API base empty so requests hit same-origin /v1 (Vite proxy)—direct absolute URLs need working CORS; (3) Vite proxy target matches AGENTIUM_CONTROL_PLANE_URL / vite.config."
+  }
+}

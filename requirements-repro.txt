@@ -1,0 +1,20 @@
+# Optional pinned subset for local reproducibility (see docs/REPRO.md).
+# Prefer uv.lock when using Astral uv: `uv lock` / `uv sync`.
+# These pins mirror known-good Windows baseline notes in docs/evidence/baseline_gaps.md.
+pydantic==2.9.2
+pydantic-core==2.23.4
+python-dotenv==1.0.1
+typing-extensions==4.12.2
+tenacity==8.5.0
+structlog==24.4.0
+orjson==3.10.7
+PyJWT==2.9.0
+cryptography==43.0.1
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp==1.27.0
+# Dev (paper tests)
+pytest==8.3.3
+pytest-cov==5.0.0
+pytest-asyncio==0.24.0
+pyyaml==6.0.2

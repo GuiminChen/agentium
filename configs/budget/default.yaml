@@ -1,0 +1,10 @@
+version: "p0-default"
+tenant_budgets:
+  default:
+    token_limit: 100000
+    cost_limit: 100.0
+    max_concurrency: 4
+  tenant-a:
+    token_limit: 50000
+    cost_limit: 50.0
+    max_concurrency: 2

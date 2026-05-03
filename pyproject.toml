@@ -1,0 +1,128 @@
+[project]
+name = "agentium"
+version = "0.1.0"
+description = "An agent system framework designed with OS architecture principles"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Guimin Chen", email = "chenguimin@foxmail.com"},
+]
+keywords = ["ai", "agents", "llm", "operating-system", "framework"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2.0.0",
+    "typing-extensions>=4.5.0",
+    "python-dotenv>=1.0.0",
+    "tenacity>=8.2.0",
+    "structlog>=23.0.0",
+    "orjson>=3.9.0",
+    "PyYAML>=6.0.0",
+    "PyJWT>=2.8.0",
+    "cryptography>=42.0.0",
+    "opentelemetry-api>=1.24.0",
+    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+openai = [
+    "openai>=1.0.0",
+]
+anthropic = [
+    "anthropic>=0.7.0",
+]
+chroma = [
+    "chromadb>=0.4.0",
+]
+qdrant = [
+    "qdrant-client>=1.6.0",
+]
+langgraph = [
+    "langgraph>=0.2.0",
+]
+mem0 = [
+    "mem0ai>=0.1.0",
+]
+[project.urls]
+Homepage = "https://github.com/GuiminChen/agentium"
+Documentation = "https://github.com/GuiminChen/agentium"
+Repository = "https://github.com/GuiminChen/agentium"
+"Bug Tracker" = "https://github.com/GuiminChen/agentium/issues"
+
+[project.scripts]
+agentium = "agentium.cli.main:main"
+agentium-review = "agentium.cli.commands.ai_review:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+markers = [
+    "paper: tests referenced by the paper / REPRO bundle (hypotheses H1–H6; see docs/paper/arxiv/six-acceptance-mapping.md)",
+    "integration: integration tests (may be slower)",
+]

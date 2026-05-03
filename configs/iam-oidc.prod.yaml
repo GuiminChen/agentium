@@ -1,0 +1,20 @@
+version: "v1-prod"
+identity_provider:
+  type: "oidc"
+  issuer: "https://idp.example.com"
+  audience: "agentium"
+  jwks_url: "https://idp.example.com/.well-known/jwks.json"
+  tenant_claim: "tenant_id"
+  roles_claim: "roles"
+  subject_claim: "sub"
+authorization:
+  type: "abac"
+  policy_file: "configs/abac-policy.yaml"
+  hot_reload: true
+telemetry:
+  provider: "otel"
+  service_name: "agentium"
+  exporters:
+    traces: "otlp"
+    metrics: "otlp"
+    logs: "otlp"

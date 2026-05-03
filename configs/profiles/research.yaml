@@ -1,0 +1,45 @@
+# DeepResearch profile (PRD §3.7 / §3.18).
+# Drives `agentium research run`; treated as the canonical declarative
+# configuration for the research workflow.
+
+name: deepresearch.v1
+description: >
+  Governed five-stage research pipeline: plan -> search -> synthesize ->
+  critique -> report.  Each stage emits a contract-bound artifact stored
+  via ArtifactStore so the auditor can replay the citation chain.
+
+defaults:
+  timeout_seconds: 30.0
+  max_total_calls: 25
+
+stages:
+  - name: plan
+    handler: research.plan
+    artifact:
+      required_keys: [topic, questions]
+  - name: search
+    handler: research.search
+    depends_on: [plan]
+    artifact:
+      required_keys: [results]
+  - name: synthesize
+    handler: research.synthesize
+    depends_on: [search]
+    artifact:
+      required_keys: [notes, citations]
+  - name: critique
+    handler: research.critique
+    depends_on: [synthesize]
+    artifact:
+      required_keys: [issues]
+  - name: report
+    handler: research.report
+    depends_on: [critique]
+    artifact:
+      required_keys: [title, summary, citations]
+
+guardrails:
+  emergence:
+    workflow.node_completed:
+      warn_threshold: 50
+      hard_limit: 100

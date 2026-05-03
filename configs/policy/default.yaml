@@ -1,0 +1,14 @@
+version: "p0-default"
+default_decision: "deny"
+default_reason: "Denied by default policy"
+rules:
+  - id: "allow-web-search-for-analyst"
+    decision: "allow"
+    reason: "Analyst can use web search"
+    tools: ["web_search"]
+    roles: ["analyst"]
+  - id: "approval-required-for-db-export"
+    decision: "require_approval"
+    reason: "DB export is high risk and requires approval"
+    tools: ["db_export"]
+    roles: ["admin", "operator"]

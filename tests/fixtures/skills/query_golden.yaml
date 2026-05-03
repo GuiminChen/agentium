@@ -1,0 +1,22 @@
+# Golden queries for heuristic skill routing (tests + demos).
+# expect_primary must match SKILL.md frontmatter `name`.
+
+cases:
+  - id: docx-memo
+    query: "Generate a Word memo with letterhead and save as docx"
+    expect_primary: docx
+  - id: pdf-merge
+    query: "Merge chapter1.pdf and chapter2.pdf into one download"
+    expect_primary: pdf
+  - id: pptx-deck
+    query: "Build a pitch deck with slides for investor presentation"
+    expect_primary: pptx
+  - id: xlsx-spreadsheet
+    query: "Fix formulas in the quarterly spreadsheet xlsx"
+    expect_primary: xlsx
+  - id: mcp-server
+    query: "Design a Model Context Protocol server for our ticketing API"
+    expect_primary: mcp-builder
+  - id: skill-creator-evals
+    query: "Help me write evals for a new agent skill package"
+    expect_primary: skill-creator

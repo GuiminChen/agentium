@@ -1,0 +1,229 @@
+{
+  "nav": {
+    "overview": "总览",
+    "sessions": "会话 / Runs",
+    "approvals": "审批",
+    "budget": "预算",
+    "turnDebug": "Turn 调试",
+    "policy": "策略",
+    "decisionChain": "决策链",
+    "background": "后台",
+    "deepResearch": "深度研究",
+    "workflowIde": "工作流 IDE",
+    "coordination": "编排制品",
+    "eval": "评估门禁",
+    "compliance": "合规",
+    "connectors": "连接器",
+    "governance": "治理",
+    "settings": "设置",
+    "more": "更多",
+    "workspace": "工作台",
+    "toolsCatalog": "工具"
+  },
+  "common": {
+    "loading": "加载中…",
+    "error": "错误",
+    "copy": "复制",
+    "submit": "提交",
+    "reload": "刷新"
+  },
+  "contract": {
+    "violationTitle": "契约告警",
+    "violationDetail": "部分条目缺少必需的关联字段（如 trace / request）。",
+    "ob03NoTraceTitle": "可观测：关联信息不完整",
+    "ob03NoTraceBody": "时间线有条目，但在 payload 中未解析到 trace_id。外链与按 trace 排障可能不完整，请核对服务端审计载荷（PRD Ob-03）。",
+    "auditPayloadTitle": "审计载荷关联性",
+    "auditPayloadDetail": "部分事件在 payload 中缺少关联键（如 trace_id），跨页跳转能力可能下降。"
+  },
+  "approval": {
+    "argsFingerprint": "参数指纹",
+    "copyFingerprint": "复制",
+    "openRunDetail": "打开 Run",
+    "runLinkAria": "打开该审批对应的 Run 详情",
+    "pendingListAria": "待处理审批列表"
+  },
+  "policyRelease": {
+    "wizardTitle": "策略发布（HMAC 制品）",
+    "wizardHelp": "签名算法与 Python 端一致：键有序、无多余空白，对 {\"version\",\"policy_document\"} 做 HMAC-SHA256；密钥需与服务端 AGENTIUM_POLICY_RELEASE_HMAC_SECRET 一致。",
+    "version": "制品版本号",
+    "documentJson": "policy_document（JSON）",
+    "metadataJson": "metadata（JSON 对象）",
+    "hmacSecret": "HMAC 密钥（仅本地，勿提交）",
+    "submit": "提交发布（POST /v1/policies/releases）",
+    "invalidJsonDocument": "policy_document 必须是合法 JSON 对象",
+    "invalidJsonMetadata": "metadata 必须是合法 JSON 对象",
+    "secretRequired": "需要 HMAC 密钥才能完成签名",
+    "colId": "release_id",
+    "colVersion": "版本",
+    "colStatus": "状态",
+    "colTenant": "tenant_id",
+    "noReleases": "暂无策略发布记录。",
+    "detailTitle": "已选发布单",
+    "approveLegend": "审批（POST …/approve）",
+    "activateLegend": "按租户激活（POST …/activate）",
+    "rollbackLegend": "回滚（POST …/rollback）",
+    "approve": "审批通过",
+    "activate": "激活",
+    "rollback": "回滚",
+    "tenantIdsHint": "tenant_ids（逗号或换行分隔）",
+    "selectRelease": "请先在表格中选择一条发布记录。",
+    "tenantsRequired": "激活时至少填写一个 tenant_id。"
+  },
+  "auditTable": {
+    "colTime": "时间",
+    "colType": "事件类型",
+    "colActions": "复制",
+    "copyTrace": "复制 trace_id",
+    "copyToolUse": "复制 tool_use_id"
+  },
+  "runDetail": {
+    "timelineLabel": "Run 时间线",
+    "toolUseId": "tool_use_id",
+    "rawTimeline": "原始时间线 JSON",
+    "copyRunId": "复制 run_id",
+    "copyTraceId": "复制 trace_id",
+    "observability": "可观测"
+  },
+  "evalGates": {
+    "runButton": "执行发布门禁",
+    "overallPass": "全部门禁通过",
+    "overallFail": "存在失败门禁 — 不可按此结果发布",
+    "gateName": "门禁",
+    "colResult": "结果",
+    "passed": "通过",
+    "failed": "失败",
+    "duration": "耗时(ms)",
+    "expandDetail": "详情 / 错误",
+    "noDetail": "无附加详情。"
+  },
+  "overview": {
+    "healthCard": "健康检查",
+    "readyCard": "就绪",
+    "versionCard": "后端版本",
+    "pendingTitle": "待办审批",
+    "failedRunsTitle": "近期失败 Run（启发式）",
+    "failedRunsHint": "当最近审计事件类型包含 fail/blocked/error 时列入。",
+    "budgetTitle": "预算（租户摘要）",
+    "openBudget": "打开预算页 →"
+  },
+  "decisionChain": {
+    "eventType": "event_type",
+    "runId": "run_id（可选）",
+    "tenantId": "tenant_id（可选）"
+  },
+  "policyChain": {
+    "effectiveTitle": "当前有效策略（快照）",
+    "effectiveHint": "只读展示 GET /v1/policy/effective 返回的装载策略；单次请求命中结果请以审计事件为准（如 policy_decision）。",
+    "timelineTitle": "审计时间线",
+    "timelineHint": "筛选审计事件；配合 run_id 过滤 policy_decision 可与左侧快照对照。"
+  },
+  "compliancePage": {
+    "eventType": "event_type（精确匹配）",
+    "runId": "run_id（可选）",
+    "tenantId": "tenant_id（可选）",
+    "hint": "服务端按 event_type 精确匹配；请按部署环境的审计标签填写。"
+  },
+  "auditExport": {
+    "title": "审计导出（脱敏，GET /v1/audit/export）",
+    "runId": "run_id",
+    "redact": "对 payload 做占位脱敏",
+    "download": "下载 JSON",
+    "error": "导出失败",
+    "needCap": "需要权限 export.audit.redacted"
+  },
+  "deepResearch": {
+    "postRun": "启动研究（POST /v1/research/run）",
+    "reloadSnapshot": "刷新快照（GET）",
+    "workflowTitle": "工作流进度",
+    "pendingNode": "当前待处理节点",
+    "specProgress": "规范节点"
+  },
+  "workflowIde": {
+    "runIdLabel": "run_id",
+    "enterRunId": "填写 run_id 以加载 GET /v1/workflows/{run_id}。",
+    "noSpecNodes": "服务端返回了工作流数据，但 spec_nodes 缺失或为空，无法绘制 DAG（C-01 部分满足）。",
+    "apiNote": "只读图来自控制面；若已配置可对照 GET /v1/task-graph/{run_id}。",
+    "rawResponse": "原始 JSON",
+    "graphTitle": "DAG（spec_nodes）"
+  },
+  "coordination": {
+    "artifactsTitle": "制品",
+    "copyId": "复制 artifact_id",
+    "deepLink": "此 run 的制品"
+  },
+  "background": {
+    "pause": "暂停",
+    "resume": "恢复",
+    "stop": "停止",
+    "stopConfirm": "确定停止后台守护进程？操作幂等，但会中断进行中的任务。",
+    "statusHint": "从状态 JSON 解析的提示（若有）。"
+  },
+  "governancePage": {
+    "intro": "领域包由服务端从配置目录加载；控制面暂无二进制下载 API，请参阅仓库文档与部署清单。",
+    "docFixedIncome": "固收领域叙事（文档）",
+    "docLoader": "Codemap：domain_pack_loader",
+    "manifestFile": "包根目录需包含 domain_pack.yaml（见 DomainPackLoader）。",
+    "envHint": "路径与签名通过运行时设置 / 密钥管理注入，不在此页展示。"
+  },
+  "manifest": {
+    "advancedTitle": "高级：run_manifest（可选，PRD RM-01）",
+    "optionalHint": "若填写，须为与服务端 RunManifest 策略一致的 JSON 对象；留空则不带该字段。缺失制品、SHA 不匹配等会按契约返回 JSON 可读错误（RM-02），见响应 detail。",
+    "invalidJson": "run_manifest 须为合法 JSON 对象或留空",
+    "placeholder": "{ \"profile\": \"dev\", \"build_id\": \"local\", \"declared_tools\": [\"echo_tool\"] }"
+  },
+  "toolsCatalog": {
+    "title": "工具目录",
+    "hint": "只读列表，来源 GET /v1/tools（需 tools.read）。实际调用请用 Turn 调试或工作台。",
+    "colName": "名称",
+    "colRisk": "风险",
+    "colCaps": "能力",
+    "colContract": "契约",
+    "countLabel": "共 {{count}} 项"
+  },
+  "sessionsPage": {
+    "title": "会话列表",
+    "hint": "数据来源 GET /v1/runs/recent。可在工作台按 run_id 发起 Turn，或打开时间线查看详情。",
+    "colRunId": "run_id",
+    "colLastEvent": "最近事件",
+    "colLastTs": "最近时间",
+    "colActions": "操作",
+    "openWorkspace": "对话",
+    "openRun": "时间线",
+    "empty": "暂无 Run 记录。",
+    "newChat": "新开工作台",
+    "needCap": "列出会话需要权限 runs.read。"
+  },
+  "workspace": {
+    "title": "会话工作台（轻量）",
+    "hint": "每条消息会 POST /v1/turn，使用 echo_tool，文本放入 args。若状态为 pending_approval，请到审批中心处理。",
+    "placeholder": "输入消息…",
+    "send": "发送",
+    "clear": "清空记录",
+    "sessionRunId": "会话 run_id",
+    "openApprovals": "打开审批",
+    "assistantPending": "待审批 — 请在审批中心处理。",
+    "assistantCompleted": "本回合已完成。",
+    "rawResponse": "响应",
+    "dispositionLabel": "消息处置（PRD §3.5.1）",
+    "tierLabel": "MCP 执行路径分级（PRD §3.9.2）",
+    "dispositionCollect": "collect",
+    "dispositionFollowup": "followup",
+    "dispositionSteer": "steer",
+    "tierDirect": "direct-tool",
+    "tierCodeMcp": "code-exec-mcp",
+    "referencesHeading": "引用（SourceRef 结构）",
+    "memoryFootnote": "本构建不提供租户侧记忆/偏好 HTTP CRUD（PRD §3.10）；请在已配置时使用审计与治理流。"
+  },
+  "settings": {
+    "language": "语言",
+    "observabilityLinks": "可观测链接（服务端）",
+    "runManifestRm01": "发起 Turn 时，请在 <turnDebug>Turn 调试</turnDebug> 或 <workspace>工作台</workspace> 的高级选项中，将上述 JSON 粘贴为 <code>run_manifest</code>。",
+    "applyReload": "应用并重新加载身份",
+    "applyRunning": "正在请求 /v1/me …",
+    "applyOk": "身份已刷新（/v1/me），能力列表已更新。",
+    "applyNeedIdentity": "请填写 Header 下的租户与用户，或 Bearer token；保存后再点此按钮。",
+    "apiBaseHint": "本地开发建议将此项留空：请求走当前站点同源路径 /v1，由 Vite 代理到控制面（自定义身份头最可靠）。若填写 http://127.0.0.1:8765 等绝对 URL，浏览器会跨域直连控制面；后端若未配置 CORS（允许 X-Tenant-Id、X-User-Id、X-Role 等），可能出现 missing_identity_headers 或请求失败。",
+    "observabilityCorsHint": "若已填写租户/用户仍报 missing_identity_headers：请清空 API base 改用代理，或为控制面开启 CORS。",
+    "applyNetworkFailed": "「Failed to fetch」多半是浏览器根本没拿到 HTTP 响应。请逐项核对：① 控制面是否在监听（例如本机先运行 agentium serve）；② API base 建议留空，让请求走当前页的 /v1（Vite 代理）；若必须直连绝对 URL，需后端正确配置 CORS；③ Vite 代理目标是否为 AGENTIUM_CONTROL_PLANE_URL / vite.config 里的端口。"
+  }
+}

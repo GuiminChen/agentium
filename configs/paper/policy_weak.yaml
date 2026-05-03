@@ -1,0 +1,10 @@
+# Paper REPO: "weak governance" — default deny; paper_probe requires HITL.
+version: paper-weak
+default_decision: deny
+default_reason: denied until allowlisted
+rules:
+  - id: paper-probe-require-approval
+    decision: require_approval
+    reason: paper weak profile — HITL for probe
+    tools: [paper_probe]
+    roles: [analyst]

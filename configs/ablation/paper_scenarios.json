@@ -1,0 +1,55 @@
+{
+  "description": "Maps paper acceptance hypotheses (H1–H6) to pytest node ids used by pytest -m paper.",
+  "hypotheses": {
+    "H1": {
+      "label": "Run manifest tool allowlist",
+      "tests": [
+        "tests/unit/tools/test_tool_registry.py::test_paper_hypothesis_h1_manifest_allowlist_blocks_undeclared_tool",
+        "tests/unit/api/test_http_control_plane.py::test_paper_http_run_manifest_declared_tools_blocks_non_listed_tool"
+      ]
+    },
+    "H2": {
+      "label": "Approval gate integrity",
+      "tests": [
+        "tests/integration/governance/test_paper_hypothesis_h2_approval.py::test_paper_hypothesis_h2_wrong_approval_id_does_not_execute",
+        "tests/integration/governance/test_paper_hypothesis_h2_approval.py::test_paper_hypothesis_h2_args_mismatch_blocks_after_approval",
+        "tests/integration/governance/test_paper_hypothesis_h2_approval.py::test_paper_hypothesis_h2_rejected_approval_is_policy_denied"
+      ]
+    },
+    "H3": {
+      "label": "Background guard noise",
+      "tests": [
+        "tests/integration/background/test_paper_hypothesis_h3_background_guard.py::test_paper_hypothesis_h3_background_action_blocked_when_policy_denies"
+      ]
+    },
+    "H4": {
+      "label": "Outbound DLP on tool output",
+      "tests": [
+        "tests/integration/security/test_dlp_pipeline.py::test_dlp_blocks_secret_output"
+      ]
+    },
+    "H5": {
+      "label": "Cross-tenant memory isolation",
+      "tests": [
+        "tests/unit/memory/test_memory_service.py::test_cross_tenant_blocked"
+      ]
+    },
+    "H6": {
+      "label": "Reliability drill / MTTR reporting",
+      "tests": [
+        "tests/unit/reliability/test_drill_runner.py::test_reliability_drill_runner_reports_mttr_and_safe_degrade"
+      ]
+    }
+  },
+  "expected_ablation_failures": {
+    "no_manifest": [
+      "tests/unit/tools/test_tool_registry.py::test_paper_hypothesis_h1_manifest_allowlist_blocks_undeclared_tool",
+      "tests/unit/api/test_http_control_plane.py::test_paper_http_run_manifest_declared_tools_blocks_non_listed_tool"
+    ],
+    "permissive": [
+      "tests/integration/governance/test_paper_hypothesis_h2_approval.py::test_paper_hypothesis_h2_wrong_approval_id_does_not_execute",
+      "tests/integration/governance/test_paper_hypothesis_h2_approval.py::test_paper_hypothesis_h2_args_mismatch_blocks_after_approval",
+      "tests/integration/governance/test_paper_hypothesis_h2_approval.py::test_paper_hypothesis_h2_rejected_approval_is_policy_denied"
+    ]
+  }
+}

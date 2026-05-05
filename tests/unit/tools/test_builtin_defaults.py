@@ -11,6 +11,8 @@ from agentium.governance.audit_lineage import InMemoryAuditSink
 from agentium.governance.approval_gate import ApprovalGate
 from agentium.governance.policy_engine import PolicyEngine
 from agentium.coordination.budget_ledger import BudgetLedger, TenantBudget
+from agentium.models.context import RequestContext
+from agentium.shared.request_context import set_request_context
 from agentium.tools.builtin_defaults import builtin_tool_specs_for_profile, register_builtin_tools
 from agentium.tools.tool_registry import ToolRegistry
 
@@ -50,4 +52,49 @@ def test_register_builtin_tools_dev_count(
     )
     register_builtin_tools(reg, settings)
     assert len(reg.list_catalog_entries()) >= 20
+
+
+def test_mcp_stub_reflects_tier_and_disposition() -> None:
+    specs = {s.name: s for s in builtin_tool_specs_for_profile("dev")}
+    assert "mcp_stub" in specs
+    handler = specs["mcp_stub"].handler
+
+    set_request_context(
+        RequestContext(
+            request_id="r1",
+            run_id="run1",
+            tenant_id="tenant-long-name",
+            user_id="u1",
+            trace_id="tr1",
+            role="user",
+            deployment_mode="dev",
+            message_disposition="steer",
+            mcp_execution_tier="direct-tool",
+        )
+    )
+    out_direct = handler({"action": "ping", "query": "你好"})
+    assert out_direct["mock_kind"] == "mcp_direct"
+    assert out_direct["tier"] == "direct-tool"
+    assert out_direct["message_disposition"] == "steer"
+    assert out_direct["echo_query"] == "你好"
+    assert out_direct["simulated"]["method"] == "ping"
+
+    set_request_context(
+        RequestContext(
+            request_id="r2",
+            run_id="run2",
+            tenant_id="t2",
+            user_id="u1",
+            trace_id="tr2",
+            role="user",
+            deployment_mode="dev",
+            message_disposition="collect",
+            mcp_execution_tier="code-exec-mcp",
+        )
+    )
+    out_exec = handler({"query": "sandbox"})
+    assert out_exec["mock_kind"] == "mcp_code_exec"
+    assert out_exec["tier"] == "code-exec-mcp"
+    assert out_exec["message_disposition"] == "collect"
+    assert out_exec["simulated"]["sandbox_id"] == "mock-sbx-001"
 

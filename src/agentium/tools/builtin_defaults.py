@@ -141,6 +141,54 @@ def _summarize_stub(args: dict) -> dict:
     return {"summary": text[:200], "truncated": len(text) > 200}
 
 
+def _mcp_stub_handler(args: dict) -> dict:
+    """Return a deterministic mock MCP envelope keyed off ingress ``mcp_execution_tier``.
+
+    Lets UI/E2E verify disposition + tier wiring without a real MCP server (design intent:
+    observability-only stub; no outbound MCP).
+
+    Args:
+        args: Optional ``action`` (default ``list_tools``) and ``query`` echoed for humans.
+
+    Returns:
+        Structured payload including ``mock_kind``, ``tier``, ``message_disposition``, and
+        a ``simulated`` subtree that differs for ``code-exec-mcp`` vs ``direct-tool``.
+    """
+
+    from agentium.shared.request_context import get_request_context
+
+    ctx = get_request_context()
+    tenant_id = ctx.tenant_id
+    tenant_preview = f"{tenant_id[:8]}..." if len(tenant_id) > 8 else tenant_id
+    action = str(args.get("action", "list_tools")).strip() or "list_tools"
+    query_hint = str(args.get("query", "")).strip()
+    tier = ctx.mcp_execution_tier
+    disposition = ctx.message_disposition
+    if tier == "code-exec-mcp":
+        return {
+            "mock_kind": "mcp_code_exec",
+            "tier": tier,
+            "message_disposition": disposition,
+            "simulated": {
+                "sandbox_id": "mock-sbx-001",
+                "action": action,
+                "stderr_tail": "",
+            },
+            "echo_query": query_hint,
+            "tenant_preview": tenant_preview,
+            "trace_id": ctx.trace_id,
+        }
+    return {
+        "mock_kind": "mcp_direct",
+        "tier": tier,
+        "message_disposition": disposition,
+        "simulated": {"proto": "jsonrpc-ish", "method": action, "ok": True},
+        "echo_query": query_hint,
+        "tenant_preview": tenant_preview,
+        "trace_id": ctx.trace_id,
+    }
+
+
 def _alert_stub(args: dict) -> dict:
     return {"alert_id": "stub", "severity": str(args.get("severity", "info"))}
 
@@ -258,6 +306,12 @@ _ALL_BUILTIN: List[ToolSpec] = [
         capabilities=["nlp_stub"],
         risk_level="low",
         handler=_summarize_stub,
+    ),
+    ToolSpec(
+        name="mcp_stub",
+        capabilities=["mcp.mock"],
+        risk_level="low",
+        handler=_mcp_stub_handler,
     ),
     ToolSpec(
         name="alert_stub",

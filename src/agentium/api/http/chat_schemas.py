@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
-from agentium.api.http.control_plane_schemas import MessageDisposition
+from agentium.api.http.control_plane_schemas import MessageDisposition, McpExecutionTier
 
 
 class ChatSessionCreateRequest(BaseModel):
@@ -37,6 +37,10 @@ class ChatMessageSendRequest(BaseModel):
     session_id: str = Field(min_length=1)
     content: str = Field(min_length=1)
     message_disposition: MessageDisposition = Field(default="collect")
+    mcp_execution_tier: McpExecutionTier = Field(
+        default="direct-tool",
+        description="Ingress tier for audit/observability (same semantics as POST /v1/turn).",
+    )
     agent_skill: Optional[str] = None
     llm_model: Optional[str] = None
     stream: bool = False

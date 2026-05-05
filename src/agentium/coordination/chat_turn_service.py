@@ -63,10 +63,26 @@ class ChatTurnService:
         content: str,
         trace_id: str,
         message_disposition: str,
+        mcp_execution_tier: str,
         request_id: str,
         llm_model: Optional[str],
     ) -> ChatSendOutcome:
-        """Append user assistant exchange; requires active session and configured DeepSeek client."""
+        """Append user assistant exchange; requires active session and configured DeepSeek client.
+
+        Args:
+            tenant_id: Tenant isolation key.
+            session_id: Chat session id (MVP maps to ``run_id`` in message store).
+            user_id: Caller identity.
+            content: User-visible message body sent to the model after history assembly.
+            trace_id: Trace correlation id for audit.
+            message_disposition: Ingress disposition forwarded into audit and persisted user row.
+            mcp_execution_tier: MCP path grade for observability (audit + user row); mirrors ``POST /v1/turn``.
+            request_id: Unique id for this HTTP submission.
+            llm_model: Optional model hint from client.
+
+        Returns:
+            ChatSendOutcome: Assistant-facing identifiers and rendered blocks for HTTP.
+        """
 
         if not self._sessions.session_exists(tenant_id=tenant_id, session_id=session_id):
             raise KeyError("session_not_found")
@@ -79,6 +95,7 @@ class ChatTurnService:
             "message_id": public_message_id,
             "content": content,
             "message_disposition": message_disposition,
+            "mcp_execution_tier": mcp_execution_tier,
             "request_id": request_id,
             "user_id": user_id,
         }
@@ -98,6 +115,7 @@ class ChatTurnService:
             event_type="chat_message_ingress",
             payload={
                 "message_disposition": message_disposition,
+                "mcp_execution_tier": mcp_execution_tier,
                 "content_len": len(content),
                 "llm_model_requested": llm_model,
             },

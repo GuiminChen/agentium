@@ -25,6 +25,7 @@ rules:
       - template_render_stub
       - format_table_stub
       - summarize_stub
+      - mcp_stub
       - alert_stub
     roles: []
   - id: allow-web-search-default-roles

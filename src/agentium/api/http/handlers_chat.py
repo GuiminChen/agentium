@@ -292,6 +292,7 @@ class ChatHTTPHandlersMixin:
                 content=req.content,
                 trace_id=trace_hdr,
                 message_disposition=req.message_disposition,
+                mcp_execution_tier=req.mcp_execution_tier,
                 request_id=request_id,
                 llm_model=req.llm_model,
             )

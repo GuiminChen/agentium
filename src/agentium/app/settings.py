@@ -135,14 +135,17 @@ def _parse_float_env(raw: Optional[str], *, default: float) -> float:
 def load_settings(env_file: Optional[Path] = None) -> AppSettings:
     """Load settings from environment (optional .env for local dev)."""
 
+    repo_root = Path(__file__).resolve().parents[3]
     if env_file is not None and env_file.exists():
         load_dotenv(env_file)
     else:
+        # CWD `.env` first (local overrides), then repo-root `.env` for missing keys so
+        # `agentium serve` still picks up secrets when the shell cwd is e.g. `frontend/`.
         load_dotenv()
+        load_dotenv(repo_root / ".env", override=False)
 
     profile = _parse_profile(os.getenv("AGENTIUM_PROFILE"))
     data_dir = Path(os.getenv("AGENTIUM_DATA_DIR", ".agentium_data")).resolve()
-    repo_root = Path(__file__).resolve().parents[3]
     policy_default = repo_root / "configs" / "runtime_policy.default.yaml"
     policy_path = Path(os.getenv("AGENTIUM_POLICY_PATH", str(policy_default))).resolve()
 

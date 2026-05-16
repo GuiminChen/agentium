@@ -10,6 +10,8 @@ from typing import Sequence
 
 from agentium.cli.commands.ai_review import main as ai_review_main
 from agentium.cli.commands.research import main as research_main
+from agentium.cli.commands.research_job import main as research_job_main
+from agentium.cli.commands.task_lock import main as task_lock_main
 
 
 _LOGGER = logging.getLogger("agentium.cli")
@@ -38,6 +40,16 @@ def build_parser() -> argparse.ArgumentParser:
         "research", help="Run the DeepResearch pipeline"
     )
     research_parser.add_argument("research_args", nargs=argparse.REMAINDER)
+
+    rj = subparsers.add_parser("research-job", help="Create/list lightweight research jobs (P1-24)")
+    rj.add_argument("research_job_args", nargs=argparse.REMAINDER)
+
+    tl = subparsers.add_parser(
+        "task-lock",
+        help="Acquire/release cross-worker task leases (P2; requires AGENTIUM_FEATURE_TASK_LOCK)",
+    )
+    tl.add_argument("task_lock_args", nargs=argparse.REMAINDER)
+
     return parser
 
 
@@ -65,6 +77,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_release_gates()
     if args.command == "research":
         return research_main(args.research_args)
+    if args.command == "research-job":
+        return research_job_main(args.research_job_args)
+    if args.command == "task-lock":
+        return task_lock_main(args.task_lock_args)
     parser.print_help()
     return 1
 
@@ -72,14 +88,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _run_serve(host: str | None, port: int | None) -> int:
     """Start the HTTP control plane using settings + bootstrap."""
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     from agentium.api.http.resources import HTTPControlPlaneResources
     from agentium.api.http_control_plane import build_http_server
     from agentium.app import build_runtime_container, load_settings
+    from agentium.app.logging_setup import setup_logging
 
     from agentium.app.identity_factory import build_identity_provider
 
     settings = load_settings()
+    setup_logging(settings)
     try:
         identity_provider = build_identity_provider(settings)
     except ValueError as exc:
@@ -117,12 +134,21 @@ def _run_serve(host: str | None, port: int | None) -> int:
         run_message_store=container.run_message_store,
         chat_session_store=container.chat_session_store,
         chat_turn_service=container.chat_turn_service,
+        chat_memory_lane_router=container.chat_memory_lane_router,
+        memory_service=container.memory_service,
         session_checkpoint_store=container.session_checkpoint_store,
         eval_run_store=container.eval_run_store,
         run_cancel_registry=container.run_cancel_registry,
         lifecycle_manager=container.lifecycle_manager,
         sqlite_audit_sink=sqlite_audit,
         domain_packs_root=settings.domain_packs_root,
+        settings=settings,
+        contextual_kb_store=container.contextual_kb_store,
+        research_job_service=container.research_job_service,
+        llm_wiki_service=container.llm_wiki_service,
+        deferred_task_sink=container.deferred_task_sink,
+        scheduled_job_store=container.scheduled_job_store,
+        scheduled_job_runner=container.scheduled_job_runner,
     )
     server = build_http_server(
         api=container.api,
@@ -173,6 +199,7 @@ def _run_init_db() -> int:
     from agentium.app import load_settings
     from agentium.coordination.budget_ledger import TenantBudget
     from agentium.infra.db.sqlite_chat_session_store import SqliteChatSessionStore
+    from agentium.infra.db.sqlite_scheduled_job_store import SqliteScheduledJobStore
     from agentium.infra.db.sqlite_store import (
         SqliteApprovalGate,
         SqliteAuditSink,
@@ -199,6 +226,8 @@ def _run_init_db() -> int:
     budget.close()
     chat_sess = SqliteChatSessionStore(db_path)
     chat_sess.close()
+    scheduled_jobs = SqliteScheduledJobStore(db_path)
+    scheduled_jobs.close()
     sys.stdout.write(f"initialized sqlite at {db_path}\n")
     return 0
 

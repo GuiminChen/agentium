@@ -137,25 +137,54 @@ class SqliteChatSessionStore:
         tenant_id: str,
         session_id: str,
         title: Optional[str],
+        skill: Optional[str],
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ChatSessionRecord:
-        """Update editable fields."""
+        """Replace ``title`` / ``skill`` and optionally replace stored ``metadata`` snapshot."""
 
         row = self.get_session(tenant_id=tenant_id, session_id=session_id)
         if row.deleted_at:
             raise KeyError("session_deleted")
         now = datetime.now(timezone.utc).isoformat()
-        new_title = title if title is not None else row.title
+        meta_blob = json.dumps(
+            dict(metadata) if metadata is not None else dict(row.metadata),
+            ensure_ascii=False,
+        )
         with self._lock:
             self._connection.execute(
                 """
                 UPDATE chat_sessions
-                SET title = ?, updated_at = ?
+                SET title = ?, skill = ?, metadata_json = ?, updated_at = ?
                 WHERE tenant_id = ? AND session_id = ? AND deleted_at IS NULL
                 """,
-                (new_title, now, tenant_id, session_id),
+                (title, skill, meta_blob, now, tenant_id, session_id),
             )
             self._connection.commit()
         return self.get_session(tenant_id=tenant_id, session_id=session_id)
+
+    def merge_session_metadata(
+        self,
+        *,
+        tenant_id: str,
+        session_id: str,
+        patch: Dict[str, Any],
+    ) -> ChatSessionRecord:
+        """Shallow-merge ``patch`` into stored ``metadata_json`` (non-deleted sessions only)."""
+
+        row = self.get_session(tenant_id=tenant_id, session_id=session_id)
+        md = dict(row.metadata)
+        for key, value in patch.items():
+            if value is None:
+                md.pop(key, None)
+            else:
+                md[key] = value
+        return self.update_session(
+            tenant_id=tenant_id,
+            session_id=session_id,
+            title=row.title,
+            skill=row.skill,
+            metadata=md,
+        )
 
     def soft_delete(self, *, tenant_id: str, session_id: str) -> None:
         """Set ``deleted_at`` for the tenant's session."""

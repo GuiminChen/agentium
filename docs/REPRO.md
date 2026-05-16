@@ -1,7 +1,7 @@
 # Reproducing the paper / evaluation bundle (Track A)
 
-This repository supports a **minimal, automatable** reproducibility path aligned with the
-paper’s evaluation narrative (hypotheses **H1–H6**, governance profiles, and scripted ablations).
+This repository supports a **minimal, automatable** reproducibility path aligned with
+[`docs/product/paper-readiness-and-outline.md`](product/paper-readiness-and-outline.md) (Step A).
 
 ## Prerequisites
 
@@ -81,7 +81,7 @@ Micro-benchmark only:
 python scripts/ablation_microbench.py --output artifacts/microbench_standalone.json
 ```
 
-Record a human-readable snapshot in **`artifacts/`** (for example `artifacts/ablation_run_notes.md`) or in fork-local notes; this public mirror does not ship a template under `docs/evidence/`.
+Record a human-readable snapshot following [`docs/evidence/ablation_run_TEMPLATE.md`](evidence/ablation_run_TEMPLATE.md).
 
 ## Pinning dependencies
 
@@ -91,4 +91,5 @@ in fork-specific evidence notes.
 
 ## Evidence snapshot
 
-After a successful run, keep a short log **locally** (for example under `artifacts/` or a private fork’s `docs/` branch) with git SHA, date, and key outcomes. This tree does not require committing `docs/evidence/paper_baseline_run.md`.
+After a successful run, copy the summary into
+[`docs/evidence/paper_baseline_run.md`](evidence/paper_baseline_run.md) (git SHA, date, and key outcomes).

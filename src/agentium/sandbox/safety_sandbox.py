@@ -23,7 +23,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, FrozenSet, Mapping, Optional, Sequence
+from typing import Any, Callable, FrozenSet, Mapping, Optional, Sequence, Tuple
 
 
 class SandboxDeniedError(Exception):
@@ -46,11 +46,19 @@ class SandboxProfile:
         allowed_capabilities: capabilities the caller is allowed to request.
         max_wall_seconds: max wall clock per call. ``None`` disables the limit.
         max_output_bytes: max serialized bytes per call. ``None`` disables.
+        path_allowlist_prefixes: when non-empty, optional ``metadata["sandbox_path"]`` must match
+            one of these path prefixes (POSIX-style).
+        egress_deny_by_default: when True and ``metadata["egress_host"]`` is set, outbound/net
+            capability requests must target a host in ``egress_allow_hosts``.
+        egress_allow_hosts: lowercase hostnames permitted when ``egress_deny_by_default`` is True.
     """
 
     allowed_capabilities: FrozenSet[str]
     max_wall_seconds: Optional[float] = None
     max_output_bytes: Optional[int] = None
+    path_allowlist_prefixes: Tuple[str, ...] = ()
+    egress_deny_by_default: bool = False
+    egress_allow_hosts: FrozenSet[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -165,6 +173,34 @@ class SafetySandbox:
             raise SandboxDeniedError(
                 f"Capability denied for {request.tool_name}: {sorted(denied)}"
             )
+
+        if profile.path_allowlist_prefixes:
+            path_candidate = str(request.metadata.get("sandbox_path") or "").strip()
+            if path_candidate:
+                normalized = path_candidate.replace("\\", "/")
+                if not any(normalized.startswith(p) for p in profile.path_allowlist_prefixes):
+                    self._emit(
+                        "sandbox_path_denied",
+                        {
+                            "tool_name": request.tool_name,
+                            "path": path_candidate,
+                        },
+                    )
+                    raise SandboxDeniedError("sandbox_path_not_allowlisted")
+
+        if profile.egress_deny_by_default:
+            host = str(request.metadata.get("egress_host") or "").strip().lower()
+            if host:
+                wants_net = any("net" in str(c).lower() for c in requested)
+                if wants_net and host not in profile.egress_allow_hosts:
+                    self._emit(
+                        "sandbox_egress_denied",
+                        {
+                            "tool_name": request.tool_name,
+                            "host": host,
+                        },
+                    )
+                    raise SandboxDeniedError("sandbox_egress_host_blocked")
 
         started = self._clock()
         output = callable_(*args, **kwargs)

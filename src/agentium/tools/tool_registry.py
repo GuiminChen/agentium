@@ -6,8 +6,10 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from uuid import uuid4
+
+import structlog
 
 from agentium.coordination.budget_ledger import (
     BudgetService,
@@ -33,19 +35,31 @@ from agentium.security.social_engineering_guard import SocialEngineeringGuard
 from agentium.shared.errors import ApprovalRequiredError, BudgetExceededError, PolicyDeniedError
 from agentium.tools.contract import ToolContract, ToolContractError, assert_contract_valid
 
+_LOGGER = structlog.get_logger(__name__)
+
 
 ToolHandler = Callable[[Dict[str, Any]], Dict[str, Any]]
 PolicySelector = Callable[[RequestContext], PolicyEngine]
 
+# Roles allowed to invoke high-risk tools on ``code-exec-mcp`` when tier gate is enabled.
+_CODE_EXEC_PRIVILEGED_HIGH_RISK_ROLES: frozenset[str] = frozenset(
+    {"admin", "tenant_admin", "platform_ops"}
+)
+
 
 @dataclass(frozen=True)
 class ToolSpec:
-    """Registered tool metadata and handler."""
+    """Registered tool metadata and handler.
+
+    Attributes:
+        supply_origin: Provenance label for observability (``builtin``, ``mcp``, ``web``, ...).
+    """
 
     name: str
     capabilities: List[str]
     risk_level: str
     handler: ToolHandler
+    supply_origin: str = "builtin"
 
 
 @dataclass(frozen=True)
@@ -81,6 +95,8 @@ class ToolRegistry:
         default_estimated_tokens: int = 50,
         default_estimated_cost: float = 0.01,
         default_approval_ttl_seconds: Optional[int] = None,
+        tool_contract_min_description_chars: int = 12,
+        deny_high_risk_tools_under_code_exec_tier: bool = False,
     ) -> None:
         self._policy_engine = policy_engine
         self._policy_selector = policy_selector
@@ -102,8 +118,16 @@ class ToolRegistry:
         self._default_estimated_tokens = default_estimated_tokens
         self._default_estimated_cost = default_estimated_cost
         self._default_approval_ttl_seconds = default_approval_ttl_seconds
+        self._tool_contract_min_description_chars = max(1, int(tool_contract_min_description_chars))
+        self._deny_high_risk_tools_under_code_exec_tier = deny_high_risk_tools_under_code_exec_tier
         self._tools: Dict[str, ToolSpec] = {}
         self._contracts: Dict[str, ToolContract] = {}
+
+    @property
+    def tool_contract_min_description_chars(self) -> int:
+        """Minimum stripped description length enforced for registered contracts."""
+
+        return self._tool_contract_min_description_chars
 
     @property
     def base_policy_engine(self) -> PolicyEngine:
@@ -116,10 +140,13 @@ class ToolRegistry:
     ) -> None:
         """Register one tool specification (and optional contract)."""
 
+        if spec.name in self._tools:
+            raise ToolContractError(f"tool_name_conflict:{spec.name}")
+        eff_min = self._tool_contract_min_description_chars
         if self._require_contract:
-            assert_contract_valid(contract, spec.name)
+            assert_contract_valid(contract, spec.name, min_description_chars=eff_min)
         if contract is not None:
-            assert_contract_valid(contract, spec.name)
+            assert_contract_valid(contract, spec.name, min_description_chars=eff_min)
             self._contracts[spec.name] = contract
         self._tools[spec.name] = spec
 
@@ -127,6 +154,27 @@ class ToolRegistry:
         """Return registered contract for one tool, when available."""
 
         return self._contracts.get(name)
+
+    CHAT_AGENT_TOOL_BLOCKLIST: frozenset[str] = frozenset({"db_export", "skill_invoke", "skill_run"})
+
+    def list_chat_agent_tool_specs(self) -> List[ToolSpec]:
+        """Low-risk tools eligible for LLM-driven chat loops (PRD guardrail subset).
+
+        Excludes explicit blocklist names regardless of declared risk level.
+
+        Returns:
+            Sorted stable list suitable for OpenAI ``tools`` exposure when paired with contracts.
+        """
+
+        out: List[ToolSpec] = []
+        for name in sorted(self._tools.keys()):
+            if name in self.CHAT_AGENT_TOOL_BLOCKLIST:
+                continue
+            spec = self._tools[name]
+            if spec.risk_level != "low":
+                continue
+            out.append(spec)
+        return out
 
     def list_catalog_entries(self) -> List[Dict[str, Any]]:
         """Return JSON-serializable tool metadata for HTTP catalog (no handlers)."""
@@ -138,6 +186,7 @@ class ToolRegistry:
                 "name": spec.name,
                 "capabilities": list(spec.capabilities),
                 "risk_level": spec.risk_level,
+                "supply_origin": spec.supply_origin,
                 "has_contract": name in self._contracts,
             }
             contract = self._contracts.get(name)
@@ -207,6 +256,41 @@ class ToolRegistry:
         tool_spec = self.resolve(name)
         if tool_spec is None:
             raise PolicyDeniedError("Tool is not registered and cannot be executed")
+
+        if (
+            self._deny_high_risk_tools_under_code_exec_tier
+            and not coerce_policy_allow()
+            and context.mcp_execution_tier == "code-exec-mcp"
+            and tool_spec.risk_level == "high"
+            and context.role not in _CODE_EXEC_PRIVILEGED_HIGH_RISK_ROLES
+        ):
+            self._audit_sink.append(
+                AuditRecord(
+                    event_type="execution_plane_tool_denied",
+                    tenant_id=context.tenant_id,
+                    run_id=context.run_id,
+                    policy_version=self._policy_engine.version,
+                    payload={
+                        "tool_name": name,
+                        "trace_id": context.trace_id,
+                        "mcp_execution_tier": context.mcp_execution_tier,
+                        "risk_level": tool_spec.risk_level,
+                        "role": context.role,
+                    },
+                )
+            )
+            self._telemetry.record_event(
+                name="execution_plane_tool_denied",
+                attributes={
+                    "tenant_id": context.tenant_id,
+                    "run_id": context.run_id,
+                    "trace_id": context.trace_id,
+                    "tool_name": name,
+                },
+            )
+            raise PolicyDeniedError(
+                "High-risk tools are not permitted on code-exec-mcp tier for this role"
+            )
 
         if context.manifest_declared_tools is not None and not bypass_manifest_allowlist():
             if name not in context.manifest_declared_tools:
@@ -303,6 +387,13 @@ class ToolRegistry:
         try:
             output = tool_spec.handler(call_args)
             latency_ms = int((time.monotonic() - started_at) * 1000)
+            _LOGGER.info(
+                "tool_execute_supply_origin",
+                tool_name=name,
+                supply_origin=tool_spec.supply_origin,
+                tenant_id=context.tenant_id,
+                run_id=context.run_id,
+            )
             self._run_post_execution_security(
                 context=context, tool_name=name, call_args=call_args, output=output
             )
@@ -329,6 +420,7 @@ class ToolRegistry:
                         "tool_use_id": tool_use_id,
                         "latency_ms": latency_ms,
                         "status": "success",
+                        "supply_origin": tool_spec.supply_origin,
                     },
                 )
             )
@@ -792,6 +884,75 @@ class ToolRegistry:
             return float(value)
         except (TypeError, ValueError):
             return None
+
+    def search_chat_tools_for_agent_query(self, query: str, limit: int) -> List[Dict[str, Any]]:
+        """Return ranked tool catalog hits for ``tool_search`` (P1-26)."""
+
+        from agentium.tools.tool_search_index import rank_tool_rows
+
+        rows: List[Tuple[str, str, str]] = []
+        for spec in self.list_chat_agent_tool_specs():
+            if spec.name == "tool_search":
+                continue
+            contract = self.get_contract(spec.name)
+            desc = (contract.description if contract else "") or ""
+            hay = f"{spec.name} {desc}"
+            rows.append((spec.name, desc, hay))
+        ranked = rank_tool_rows(rows, query=query, limit=limit)
+        return [{"name": h.name, "score": h.score, "snippet": h.snippet} for h in ranked]
+
+    def register_tool_search_meta(self) -> None:
+        """Register the meta ``tool_search`` tool (idempotent)."""
+
+        if "tool_search" in self._tools:
+            return
+        reg = self
+
+        def _handler(args: Dict[str, Any]) -> Dict[str, Any]:
+            q = str(args.get("query", "")).strip()
+            lim_raw = args.get("limit", 8)
+            try:
+                lim = max(1, min(32, int(lim_raw)))
+            except (TypeError, ValueError):
+                lim = 8
+            hits = reg.search_chat_tools_for_agent_query(q, lim)
+            return {"hits": hits, "query": q}
+
+        contract = ToolContract(
+            name="tool_search",
+            version="v1",
+            description=(
+                "Search low-risk chat-eligible tools by keywords over tool names and "
+                "descriptions; returns ranked hits for defer_loading discovery."
+            ),
+            input_schema={
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Keywords to match against the tool catalog.",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 32,
+                        "default": 8,
+                    },
+                },
+                "required": ["query"],
+            },
+            examples=[{"query": "calculator", "limit": 5}],
+        )
+        self.register(
+            ToolSpec(
+                name="tool_search",
+                capabilities=["catalog.search"],
+                risk_level="low",
+                handler=_handler,
+            ),
+            contract=contract,
+        )
 
     def execute_after_approval(
         self,

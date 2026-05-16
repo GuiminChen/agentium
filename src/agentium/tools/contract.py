@@ -50,7 +50,12 @@ class ToolContractError(ValueError):
     """Raised when a tool contract is missing or invalid."""
 
 
-def assert_contract_valid(contract: Optional[ToolContract], tool_name: str) -> None:
+def assert_contract_valid(
+    contract: Optional[ToolContract],
+    tool_name: str,
+    *,
+    min_description_chars: int = 12,
+) -> None:
     """Raise ToolContractError when contract is missing or violates ACI gate."""
 
     if contract is None:
@@ -59,7 +64,13 @@ def assert_contract_valid(contract: Optional[ToolContract], tool_name: str) -> N
         raise ToolContractError(
             f"tool_contract_name_mismatch:{tool_name}!={contract.name}"
         )
-    if not contract.description.strip():
+    stripped = contract.description.strip()
+    if not stripped:
         raise ToolContractError(f"tool_contract_description_empty:{tool_name}")
+    if len(stripped) < max(1, int(min_description_chars)):
+        raise ToolContractError(
+            f"tool_contract_description_too_short:{tool_name}:"
+            f"{len(stripped)}<{max(1, int(min_description_chars))}"
+        )
     if not contract.examples:
         raise ToolContractError(f"tool_contract_missing_examples:{tool_name}")

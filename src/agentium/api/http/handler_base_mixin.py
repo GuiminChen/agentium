@@ -46,6 +46,23 @@ class ControlPlaneHTTPHandlerBaseMixin:
         assert isinstance(self, BaseHTTPRequestHandler)
         self.wfile.write(encoded)
 
+    def _begin_sse_response(self) -> None:
+        """Start a UTF-8 Server-Sent Events response (newline-delimited ``data:`` JSON chunks)."""
+
+        self.send_response(HTTPStatus.OK.value)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.send_header("X-Accel-Buffering", "no")
+        assert isinstance(self, BaseHTTPRequestHandler)
+        self.end_headers()
+
+    def _write_sse_json_event(self, payload: Dict[str, Any]) -> None:
+        assert isinstance(self, BaseHTTPRequestHandler)
+        chunk = json.dumps(payload, ensure_ascii=False)
+        self.wfile.write(f"data: {chunk}\n\n".encode("utf-8"))
+        self.wfile.flush()
+
     def _write_error(
         self,
         status: HTTPStatus,
@@ -346,7 +363,19 @@ class ControlPlaneHTTPHandlerBaseMixin:
         rid = path[len(prefix) :].strip("/")
         if not rid or "/" in rid:
             return None
+        if rid == "jobs":
+            return None
         return rid
+
+    @staticmethod
+    def _parse_research_job_detail_path(path: str) -> Optional[str]:
+        prefix = "/v1/research/jobs/"
+        if not path.startswith(prefix):
+            return None
+        jid = path[len(prefix) :].strip("/")
+        if not jid or "/" in jid:
+            return None
+        return jid
 
     @staticmethod
     def _parse_workflow_get_path(path: str) -> Optional[str]:

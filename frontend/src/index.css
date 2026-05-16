@@ -2,6 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+/* LLM-Wiki markdown preview (replaces @tailwindcss/typography `prose`) */
+@layer components {
+  .wiki-md-preview {
+    @apply max-w-none text-sm leading-relaxed text-slate-800;
+  }
+  .wiki-md-preview h1 {
+    @apply mt-4 mb-2 text-2xl font-bold text-slate-900;
+  }
+  .wiki-md-preview h2 {
+    @apply mt-3 mb-2 text-xl font-semibold text-slate-900;
+  }
+  .wiki-md-preview h3 {
+    @apply mt-3 mb-1 text-lg font-semibold text-slate-900;
+  }
+  .wiki-md-preview h4 {
+    @apply mt-2 mb-1 text-base font-semibold text-slate-900;
+  }
+  .wiki-md-preview p {
+    @apply my-2;
+  }
+  .wiki-md-preview ul {
+    @apply my-2 list-disc pl-6;
+  }
+  .wiki-md-preview ol {
+    @apply my-2 list-decimal pl-6;
+  }
+  .wiki-md-preview li {
+    @apply my-0.5;
+  }
+  .wiki-md-preview a {
+    @apply text-blue-700 underline underline-offset-2 hover:text-blue-900;
+  }
+  .wiki-md-preview code {
+    @apply rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .wiki-md-preview pre {
+    @apply my-3 overflow-x-auto rounded-md bg-slate-900 p-3 text-slate-100;
+  }
+  .wiki-md-preview pre code {
+    @apply bg-transparent p-0 text-inherit;
+  }
+  .wiki-md-preview blockquote {
+    @apply border-l-4 border-slate-300 pl-3 italic text-slate-600;
+  }
+  .wiki-md-preview hr {
+    @apply my-4 border-slate-200;
+  }
+  .wiki-md-preview table {
+    @apply my-3 w-full border-collapse text-left text-xs;
+  }
+  .wiki-md-preview th,
+  .wiki-md-preview td {
+    @apply border border-slate-200 px-2 py-1;
+  }
+  .wiki-md-preview th {
+    @apply bg-slate-50 font-semibold;
+  }
+}
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;

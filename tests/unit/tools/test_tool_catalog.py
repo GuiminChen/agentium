@@ -55,10 +55,12 @@ def test_list_catalog_entries_sorted_contract_block(tmp_path: Path) -> None:
     alpha = rows[0]
     assert alpha["capabilities"] == ["a"]
     assert alpha["risk_level"] == "high"
+    assert alpha["supply_origin"] == "builtin"
     assert alpha["has_contract"] is True
     assert alpha["contract"]["version"] == "v2"
     assert alpha["contract"]["description"] == "Alpha tool for tests"
     assert alpha["contract"]["input_schema"]["type"] == "object"
     zebra = rows[1]
+    assert zebra["supply_origin"] == "builtin"
     assert zebra["has_contract"] is False
     assert "contract" not in zebra

@@ -14,6 +14,7 @@ from agentium.governance.audit_lineage import InMemoryAuditSink
 from agentium.governance.policy_engine import PolicyEngine
 from agentium.models.context import RequestContext
 from agentium.shared.errors import ApprovalRequiredError, BudgetExceededError, PolicyDeniedError
+from agentium.tools.contract import ToolContractError
 from agentium.tools.tool_registry import ToolRegistry, ToolSpec
 
 
@@ -289,3 +290,15 @@ def test_tool_registry_fails_when_budget_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(BudgetExceededError):
         registry.execute(_context(), "sum_numbers", {"a": 1, "b": 0})
+
+
+def test_tool_registry_rejects_duplicate_name(tmp_path: Path) -> None:
+    engine = PolicyEngine.load(_write_policy(tmp_path))
+    ledger = BudgetLedger(
+        {"tenant-a": TenantBudget(token_limit=1000, cost_limit=10.0, max_concurrency=1)}
+    )
+    registry = ToolRegistry(policy_engine=engine, budget_ledger=ledger, audit_sink=InMemoryAuditSink())
+    spec = ToolSpec(name="dup_tool", capabilities=["x"], risk_level="low", handler=lambda a: {"ok": True})
+    registry.register(spec)
+    with pytest.raises(ToolContractError, match="tool_name_conflict"):
+        registry.register(spec)

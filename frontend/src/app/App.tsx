@@ -7,6 +7,7 @@ import { useProfileStore } from "../core/profile/profileStore";
 import { ApprovalPage } from "../modules/approval/ApprovalPage";
 import { BackgroundPage } from "../modules/background/BackgroundPage";
 import { BudgetPage } from "../modules/budget/BudgetPage";
+import { ScheduledJobsPage } from "../modules/scheduled-jobs/ScheduledJobsPage";
 import { ConnectorsPage } from "../modules/connectors/ConnectorsPage";
 import { CoordinationPage } from "../modules/coordination/CoordinationPage";
 import { DecisionChainPage } from "../modules/decision-chain/DecisionChainPage";
@@ -14,6 +15,7 @@ import { DeepResearchPage } from "../modules/deep-research/DeepResearchPage";
 import { DegradedPage } from "../modules/degraded/DegradedPage";
 import { EvalPage } from "../modules/eval/EvalPage";
 import { GovernancePage } from "../modules/governance/GovernancePage";
+import { LlmWikiPage } from "../modules/llm-wiki/LlmWikiPage";
 import { OverviewPage } from "../modules/overview/OverviewPage";
 import { PolicyPage } from "../modules/policy/PolicyPage";
 import { RunDetailPage } from "../modules/run-detail/RunDetailPage";
@@ -37,7 +39,9 @@ export function App(): React.ReactElement {
         <Route path="workspace" element={<WorkspacePage />} />
         <Route path="turn-debug" element={<TurnDebugPage />} />
         <Route path="tools" element={<ToolCatalogPage />} />
+        <Route path="llm-wiki" element={<LlmWikiPage />} />
         <Route path="budget" element={<BudgetPage />} />
+        <Route path="scheduled-jobs" element={<ScheduledJobsPage />} />
         <Route path="policy" element={<PolicyPage />} />
         <Route path="decision-chain" element={<DecisionChainPage />} />
         <Route path="background" element={<BackgroundPage />} />

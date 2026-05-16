@@ -975,6 +975,77 @@ class SqliteRunMessageStore:
             )
         return out
 
+    def delete_latest_chat_assistant_for_message_id(
+        self,
+        *,
+        run_id: str,
+        tenant_id: str,
+        message_id: str,
+    ) -> Optional[int]:
+        """Remove the newest assistant chat row for ``message_id`` / ``message_pair_id``.
+
+        Returns:
+            Deleted ``seq`` or ``None`` when nothing matched.
+        """
+
+        mid = (message_id or "").strip()
+        if not mid:
+            return None
+        with self._lock:
+            row = self._connection.execute(
+                """
+                SELECT seq FROM run_messages
+                WHERE run_id = ? AND tenant_id = ? AND kind = ?
+                  AND (
+                    json_extract(body_json, '$.message_id') = ?
+                    OR json_extract(body_json, '$.message_pair_id') = ?
+                  )
+                ORDER BY seq DESC
+                LIMIT 1
+                """,
+                (run_id, tenant_id, CHAT_KIND_ASSISTANT, mid, mid),
+            ).fetchone()
+            if row is None:
+                return None
+            seq = int(row["seq"])
+            self._connection.execute(
+                "DELETE FROM run_messages WHERE run_id = ? AND tenant_id = ? AND seq = ?",
+                (run_id, tenant_id, seq),
+            )
+            self._connection.commit()
+        return seq
+
+    def fetch_chat_user_body_for_pair(
+        self,
+        *,
+        run_id: str,
+        tenant_id: str,
+        message_pair_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Return the stored user chat ``body`` for ``message_pair_id``."""
+
+        pid = (message_pair_id or "").strip()
+        if not pid:
+            return None
+        with self._lock:
+            urow = self._connection.execute(
+                """
+                SELECT body_json FROM run_messages
+                WHERE run_id = ? AND tenant_id = ? AND kind = ?
+                  AND json_extract(body_json, '$.message_pair_id') = ?
+                ORDER BY seq ASC
+                LIMIT 1
+                """,
+                (run_id, tenant_id, CHAT_KIND_USER, pid),
+            ).fetchone()
+        if urow is None:
+            return None
+        try:
+            parsed = json.loads(urow["body_json"])
+        except (TypeError, json.JSONDecodeError):
+            return None
+        return parsed if isinstance(parsed, dict) else None
+
     def close(self) -> None:
         with self._lock:
             self._connection.close()

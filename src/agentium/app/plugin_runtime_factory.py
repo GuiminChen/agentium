@@ -41,6 +41,7 @@ def build_workflow_orchestrator(
     guardrails: "EmergenceGuardrails | None",
     task_graph: "TaskGraphSupervisor | None",
     run_cancel_registry: "object | None" = None,
+    strict_harness_handoff: bool = False,
 ) -> OrchestrationEngine:
     """Return native or LangGraph orchestration engine sharing handler registry."""
 
@@ -51,6 +52,7 @@ def build_workflow_orchestrator(
         guardrails=guardrails,
         task_graph=task_graph,
         run_cancel_registry=run_cancel_registry,
+        strict_harness_handoff=strict_harness_handoff,
     )
     if plugins.orchestration.backend == "native":
         return native
@@ -93,6 +95,7 @@ def build_plugin_runtime(
         guardrails=guardrails,
         task_graph=task_graph,
         run_cancel_registry=run_cancel_registry,
+        strict_harness_handoff=settings.strict_harness_handoff_enabled,
     )
     fp = plugins_fingerprint_payload(plugins)
     return PluginRuntime(

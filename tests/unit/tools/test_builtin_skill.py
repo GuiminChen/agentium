@@ -6,6 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.app_settings_test_baseline import app_settings_extended_dict_for_data_dir
+from tests.helpers.chat_ingress_test_defaults import chat_ingress_off_fields
+
 from agentium.app.settings import AppSettings
 from agentium.governance.approval_gate import ApprovalGate
 from agentium.governance.audit_lineage import InMemoryAuditSink
@@ -96,8 +99,31 @@ def _minimal_settings(tmp_path: Path, repo: Path, skills: Path) -> AppSettings:
         lsp_upstream_url=None,
         deepseek_api_key=None,
         deepseek_base_url="https://api.deepseek.com",
-        chat_completion_model="deepseek-v4",
+        chat_completion_model="deepseek-v4-flash",
         chat_completion_timeout_seconds=120.0,
+        chat_skill_body_max_chars=8000,
+        chat_agent_tools_enabled=False,
+        chat_agent_max_tool_rounds=8,
+        chat_mid_semantic_memory_enabled=True,
+        chat_session_running_summary_enabled=True,
+        workspace_agent_persona_max_chars=4096,
+        workspace_agent_max_skill_tags=8,
+        workspace_agent_max_tool_allowlist=24,
+        deepseek_thinking_enabled=True,
+        deepseek_reasoning_effort="high",
+        deepseek_inject_think_max_instruction=True,
+        deepseek_dsml_tool_prompt_enabled=True,
+        persona_templates_extra_root=None,
+        log_file_path=None,
+        log_file_backup_count=14,
+        log_to_console=True,
+        chat_auto_session_title_enabled=False,
+        deferred_tasks_enabled=False,
+        deferred_thread_pool_size=4,
+        deferred_task_backend="thread",
+        redis_url=None,
+        **app_settings_extended_dict_for_data_dir(tmp_path),
+        **chat_ingress_off_fields(tmp_path),
     )
 
 
@@ -229,8 +255,31 @@ def test_skill_run_policy_denied(tmp_path: Path) -> None:
         lsp_upstream_url=None,
         deepseek_api_key=None,
         deepseek_base_url="https://api.deepseek.com",
-        chat_completion_model="deepseek-v4",
+        chat_completion_model="deepseek-v4-flash",
         chat_completion_timeout_seconds=120.0,
+        chat_skill_body_max_chars=8000,
+        chat_agent_tools_enabled=False,
+        chat_agent_max_tool_rounds=8,
+        chat_mid_semantic_memory_enabled=True,
+        chat_session_running_summary_enabled=True,
+        workspace_agent_persona_max_chars=4096,
+        workspace_agent_max_skill_tags=8,
+        workspace_agent_max_tool_allowlist=24,
+        deepseek_thinking_enabled=True,
+        deepseek_reasoning_effort="high",
+        deepseek_inject_think_max_instruction=True,
+        deepseek_dsml_tool_prompt_enabled=True,
+        persona_templates_extra_root=None,
+        log_file_path=None,
+        log_file_backup_count=14,
+        log_to_console=True,
+        chat_auto_session_title_enabled=False,
+        deferred_tasks_enabled=False,
+        deferred_thread_pool_size=4,
+        deferred_task_backend="thread",
+        redis_url=None,
+        **app_settings_extended_dict_for_data_dir(tmp_path),
+        **chat_ingress_off_fields(tmp_path),
     )
     pe = PolicyEngine.load(pol)
     reg = ToolRegistry(

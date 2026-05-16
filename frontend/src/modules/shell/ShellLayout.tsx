@@ -53,8 +53,8 @@ export function ShellLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
+    <div className="flex h-screen min-h-0 flex-col overflow-hidden">
+      <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
         <div className="font-semibold text-slate-800">Agentium</div>
         <div className="flex items-center gap-3 text-xs text-slate-600">
           {showHealth ? (
@@ -82,8 +82,8 @@ export function ShellLayout({
           ) : null}
         </div>
       </header>
-      <div className="flex flex-1">
-        <aside className="w-52 shrink-0 border-r border-slate-200 bg-slate-50 p-3 text-sm">
+      <div className="flex min-h-0 flex-1">
+        <aside className="w-52 shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 p-3 text-sm">
           <nav className="flex flex-col gap-1" aria-label="Primary">
             <NavCapLink to="/" end>
               {t("nav.overview")}
@@ -94,17 +94,23 @@ export function ShellLayout({
             <NavCapLink to="/approval" need="approval.read">
               {t("nav.approvals")}
             </NavCapLink>
-            <NavCapLink to="/workspace" need="turn.execute">
+            <NavCapLink to="/workspace" need="chat.sessions.manage">
               {t("nav.workspace")}
             </NavCapLink>
             <NavCapLink to="/tools" need="tools.read">
               {t("nav.toolsCatalog")}
+            </NavCapLink>
+            <NavCapLink to="/llm-wiki" need="wiki.read">
+              {t("nav.llmWiki")}
             </NavCapLink>
             <NavCapLink to="/turn-debug" need="turn.execute">
               {t("nav.turnDebug")}
             </NavCapLink>
             <NavCapLink to="/budget" need="budget.read">
               {t("nav.budget")}
+            </NavCapLink>
+            <NavCapLink to="/scheduled-jobs" need="jobs.read">
+              {t("nav.scheduledJobs")}
             </NavCapLink>
             <NavCapLink to="/policy" need="governance.policy.read">
               {t("nav.policy")}
@@ -137,7 +143,7 @@ export function ShellLayout({
             <NavCapLink to="/governance">{t("nav.governance")}</NavCapLink>
           </nav>
         </aside>
-        <main className="flex-1 overflow-auto p-4">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto p-4">{children}</main>
       </div>
     </div>
   );

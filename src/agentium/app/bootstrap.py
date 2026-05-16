@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
+
+import structlog
 
 from agentium.ai_gateway.deepseek_chat import DeepSeekChatCompletionClient
 from agentium.api.control_plane import ControlPlaneAPI
@@ -18,6 +20,8 @@ from agentium.channels import (
     OutboundOrchestrator,
     RateLimit,
 )
+from agentium.coordination.deferred_tasks import build_deferred_task_sink
+from agentium.coordination.chat_ingress.factory import build_chat_ingress_coordinator
 from agentium.coordination.chat_turn_service import ChatTurnService
 from agentium.coordination.artifact_store import ArtifactStore
 from agentium.coordination.budget_ledger import (
@@ -41,8 +45,13 @@ from agentium.infra.mq.inproc_bus import InprocBus
 from agentium.sandbox import ResourceManager, SafetySandbox
 from agentium.sandbox.safety_sandbox import SandboxProfile
 from agentium.app.plugin_runtime_factory import build_plugin_runtime
+
 from agentium.governance.evolution_plugin import EvolutionPlugin
 from agentium.governance.proposal_queue import ProposalQueue
+from agentium.memory.chat_memory_lane_router import (
+    ChatMemoryLaneRouter,
+    build_chat_memory_lane_router,
+)
 from agentium.memory.memory_service import MemoryService
 from agentium.models.context import RequestContext
 from agentium.governance.approval_gate import ApprovalGate, ApprovalService
@@ -54,6 +63,7 @@ from agentium.governance.audit_lineage import (
 from agentium.governance.policy_engine import PolicyEngine
 from agentium.governance.policy_release import HMACPolicySigner
 from agentium.governance.policy_release_manager import PolicyReleaseManager
+from agentium.governance.tool_approval import ToolApprovalGate
 from agentium.infra.db.sqlite_chat_session_store import SqliteChatSessionStore
 from agentium.infra.db.sqlite_store import (
     SqliteApprovalGate,
@@ -65,6 +75,7 @@ from agentium.infra.db.sqlite_store import (
 )
 from agentium.infra.telemetry import NullTelemetry, OTelTelemetry, RuntimeTelemetry
 from agentium.models.run_manifest import RunManifestPolicy
+from agentium.runtime.prompt_cache_policy import PromptCachePolicy
 from agentium.runtime.deepresearch_pipeline import DeepResearchPipeline, stub_handlers
 from agentium.security.constitutional_guard import ConstitutionalGuard
 from agentium.security.dlp_classifier import DLPClassifier
@@ -75,6 +86,9 @@ from agentium.security.social_engineering_guard import SocialEngineeringGuard
 from agentium.tools.builtin_skill import register_skill_tools
 from agentium.tools.builtin_defaults import register_builtin_tools
 from agentium.tools.tool_registry import ToolRegistry, ToolSpec
+
+
+_BOOT_LOG = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -118,6 +132,7 @@ class RuntimeContainer:
     outbound_orchestrator: OutboundOrchestrator
     notify_bridge: NotifyBridge
     memory_service: MemoryService
+    chat_memory_lane_router: ChatMemoryLaneRouter
     event_ingestor: EventIngestor
     trigger_planner: TriggerPlanner
     memory_consolidator: MemoryConsolidator
@@ -135,7 +150,13 @@ class RuntimeContainer:
     session_checkpoint_store: SqliteSessionCheckpointStore
     eval_run_store: SqliteEvalRunStore
     run_cancel_registry: RunCancelRegistry
+    contextual_kb_store: Any = None
+    research_job_service: Any = None
     background_daemon: Optional[object] = None
+    deferred_task_sink: Optional[Any] = None
+    scheduled_job_store: Optional[Any] = None
+    scheduled_job_runner: Optional[Any] = None
+    llm_wiki_service: Optional[Any] = None
     _shutdown_callbacks: list = None  # type: ignore[assignment]
 
     def start(self) -> None:
@@ -143,10 +164,20 @@ class RuntimeContainer:
 
         if self.background_daemon is not None and hasattr(self.background_daemon, "start"):
             self.background_daemon.start()
+        if (
+            self.scheduled_job_runner is not None
+            and getattr(self.settings, "scheduled_jobs_enabled", False)
+        ):
+            self.scheduled_job_runner.start()
 
     def shutdown(self) -> None:
         """Release resources: stop daemons, close persistent stores."""
 
+        if self.scheduled_job_runner is not None:
+            try:
+                self.scheduled_job_runner.stop()
+            except Exception:
+                pass
         if self.background_daemon is not None and hasattr(self.background_daemon, "stop"):
             try:
                 self.background_daemon.stop()
@@ -199,16 +230,23 @@ def _build_telemetry(settings: AppSettings) -> RuntimeTelemetry:
     return NullTelemetry()
 
 
-def build_deepseek_client_from_settings(settings: AppSettings) -> Optional[DeepSeekChatCompletionClient]:
+def build_deepseek_client_from_settings(
+    settings: AppSettings,
+    *,
+    prompt_cache_policy: Optional[PromptCachePolicy] = None,
+) -> Optional[DeepSeekChatCompletionClient]:
     """Instantiate DeepSeek REST client when API key env is present."""
 
     if not settings.deepseek_api_key:
         return None
+    policy = prompt_cache_policy if settings.prompt_cache_telemetry_enabled else None
     return DeepSeekChatCompletionClient(
         api_key=settings.deepseek_api_key,
         base_url=settings.deepseek_base_url,
         model=settings.chat_completion_model,
         timeout_seconds=float(settings.chat_completion_timeout_seconds),
+        prompt_cache_policy=policy,
+        prompt_cache_http_header=settings.prompt_cache_http_header,
     )
 
 
@@ -244,13 +282,13 @@ def build_runtime_container(
         session_checkpoint_store.close,
         eval_run_store.close,
     ]
-    deepseek_chat = build_deepseek_client_from_settings(settings)
-    chat_turn_service = ChatTurnService(
-        run_message_store=run_message_store,
-        chat_session_store=chat_session_store,
-        deepseek_client=deepseek_chat,
-        audit_sink=getattr(audit_sink, "append", None),
+    prompt_cache_policy = PromptCachePolicy()
+    deepseek_chat = build_deepseek_client_from_settings(
+        settings, prompt_cache_policy=prompt_cache_policy
     )
+    tool_approval_gate: Optional[ToolApprovalGate] = None
+    if deepseek_chat is not None:
+        tool_approval_gate = ToolApprovalGate(settings, llm_client=deepseek_chat)
     run_cancel_registry = RunCancelRegistry()
     budget_service = _build_budget_service(settings)
     resource_controller = ResourceLimitController(
@@ -274,13 +312,15 @@ def build_runtime_container(
         prompt_injection_probe=PromptInjectionProbe(),
         constitutional_guard=ConstitutionalGuard(),
         misuse_detector=MisuseDetector(),
-        prompt_cache_policy=None,
+        prompt_cache_policy=prompt_cache_policy,
         eval_contamination_guard=EvalContaminationGuard(),
         dlp_classifier=DLPClassifier(),
         secret_leak_guard=SecretLeakGuard(),
         social_engineering_guard=SocialEngineeringGuard(),
         require_contract=False,
         default_approval_ttl_seconds=settings.sqlite_approval_ttl_seconds,
+        tool_contract_min_description_chars=settings.tool_contract_min_description_chars,
+        deny_high_risk_tools_under_code_exec_tier=settings.execution_tier_high_risk_gate_enabled,
     )
     register_builtin_tools(tool_registry, settings)
     if extra_tools:
@@ -322,9 +362,19 @@ def build_runtime_container(
             allowed_capabilities=frozenset(["skill.subprocess"]),
             max_wall_seconds=120.0,
             max_output_bytes=2_000_000,
+            path_allowlist_prefixes=settings.sandbox_path_allowlist_prefixes,
+            egress_deny_by_default=settings.sandbox_egress_deny_by_default,
+            egress_allow_hosts=frozenset(settings.sandbox_egress_allow_hosts),
         ),
     )
     register_skill_tools(tool_registry, settings, policy_engine, safety_sandbox)
+    tool_registry.register_tool_search_meta()
+
+    from agentium.coordination.chat_skill_prompt import build_skill_addon_text
+
+    def _skill_addon(tag: str) -> str:
+        return build_skill_addon_text(tag, settings)
+
     resource_manager = ResourceManager()
     ipc_bus = InprocBus()
     state_observer = StateObserver()
@@ -354,9 +404,68 @@ def build_runtime_container(
         task_graph=task_graph_supervisor,
         run_cancel_registry=run_cancel_registry,
     )
-    memory_service = MemoryService(
-        backend=plugin_rt.memory_backend, audit_sink=audit_sink
+    chat_memory_lane_router, memory_service = build_chat_memory_lane_router(
+        plugins_mem=settings.plugins.memory,
+        data_dir=settings.data_dir,
+        audit_sink=audit_sink,
+        chat_session_store=chat_session_store,
     )
+
+    deferred_task_sink = build_deferred_task_sink(settings)
+
+    import agentium.plugins.llm_wiki.deferred  # noqa: F401 — register deferred kinds
+
+    from agentium.plugins.llm_wiki.runtime_bridge import set_llm_wiki_service
+    from agentium.plugins.llm_wiki.service import build_llm_wiki_plugin_service
+    from agentium.plugins.llm_wiki.tools import register_llm_wiki_tools
+
+    llm_wiki_service = build_llm_wiki_plugin_service(
+        settings, cfg=settings.plugins.llm_wiki
+    )
+    if llm_wiki_service is not None:
+        set_llm_wiki_service(llm_wiki_service)
+        register_llm_wiki_tools(tool_registry, llm_wiki_service)
+        _BOOT_LOG.info("llm_wiki_service_ready")
+    else:
+        set_llm_wiki_service(None)
+        if settings.plugins.llm_wiki.enabled:
+            _BOOT_LOG.warning(
+                "llm_wiki_service_missing_despite_enabled",
+                hint=(
+                    "Ensure `pip install -e ./crate` uses the SAME Python as this process; "
+                    "if wiki_db.backend=postgresql, set the conninfo env named in "
+                    "postgresql_conninfo_from_env. See logs for crate_package_missing_* or "
+                    "llm_wiki_postgresql_conninfo_missing."
+                ),
+            )
+        else:
+            _BOOT_LOG.info(
+                "llm_wiki_disabled",
+                hint="Set llm_wiki.enabled in plugins YAML or AGENTIUM_LLM_WIKI_ENABLED=1",
+            )
+
+    ingress_coordinator = build_chat_ingress_coordinator(settings)
+
+    chat_turn_service = ChatTurnService(
+        run_message_store=run_message_store,
+        chat_session_store=chat_session_store,
+        deepseek_client=deepseek_chat,
+        audit_sink=getattr(audit_sink, "append", None),
+        skill_addon=_skill_addon,
+        settings=settings,
+        control_plane_api=api,
+        tool_registry=tool_registry,
+        memory_lane_router=chat_memory_lane_router,
+        deferred_task_sink=deferred_task_sink,
+        ingress_coordinator=ingress_coordinator,
+        tool_approval_gate=tool_approval_gate,
+    )
+
+    from agentium.infra.db.sqlite_scheduled_job_store import SqliteScheduledJobStore
+
+    scheduled_job_store = SqliteScheduledJobStore(settings.sqlite_db_path)
+    store_callbacks.append(scheduled_job_store.close)
+
     deep_research_pipeline = DeepResearchPipeline(
         handlers,
         artifact_store=artifact_store,
@@ -440,6 +549,19 @@ def build_runtime_container(
     )
     notify_bridge = NotifyBridge(orchestrator=outbound_orchestrator)
 
+    from agentium.coordination.scheduled_job_runner import ScheduledJobRunner
+
+    _sched_audit_fn = getattr(audit_sink, "append", None)
+    scheduled_job_runner = ScheduledJobRunner(
+        store=scheduled_job_store,
+        chat_turn_service=chat_turn_service,
+        chat_session_store=chat_session_store,
+        settings=settings,
+        audit_sink=_sched_audit_fn if callable(_sched_audit_fn) else None,
+        budget_service=budget_service,
+        notify_bridge=notify_bridge,
+    )
+
     background_daemon = None
     if settings.background_enabled:
         from agentium.background.background_daemon import BackgroundDaemon
@@ -470,6 +592,23 @@ def build_runtime_container(
             ),
         )
 
+    from agentium.coordination.research_job import ResearchJobService
+    from agentium.coordination.task_lock.sqlite_backend import SqliteTaskLockBackend
+
+    task_lock_backend = (
+        SqliteTaskLockBackend(path=settings.task_lock_sqlite_path)
+        if settings.feature_task_lock_enabled
+        else None
+    )
+    research_job_service = ResearchJobService(
+        settings=settings,
+        task_lock_backend=task_lock_backend,
+    )
+    from agentium.memory.contextual_retrieval import SqliteContextualKbStore
+
+    _kb_path = settings.kb_contextual_sqlite_path or (settings.data_dir / "kb_contextual.db")
+    contextual_kb_store = SqliteContextualKbStore(_kb_path)
+
     container = RuntimeContainer(
         settings=settings,
         api=api,
@@ -489,6 +628,7 @@ def build_runtime_container(
         outbound_orchestrator=outbound_orchestrator,
         notify_bridge=notify_bridge,
         memory_service=memory_service,
+        chat_memory_lane_router=chat_memory_lane_router,
         event_ingestor=event_ingestor,
         trigger_planner=trigger_planner,
         memory_consolidator=memory_consolidator,
@@ -507,8 +647,15 @@ def build_runtime_container(
         session_checkpoint_store=session_checkpoint_store,
         eval_run_store=eval_run_store,
         run_cancel_registry=run_cancel_registry,
+        contextual_kb_store=contextual_kb_store,
+        research_job_service=research_job_service,
+        deferred_task_sink=deferred_task_sink,
+        llm_wiki_service=llm_wiki_service,
+        scheduled_job_store=scheduled_job_store,
+        scheduled_job_runner=scheduled_job_runner,
     )
     container._shutdown_callbacks = (
         approval_callbacks + audit_callbacks + store_callbacks
     )
+    container._shutdown_callbacks.append(lambda: set_llm_wiki_service(None))
     return container

@@ -14,6 +14,7 @@ _ROLE_CAPABILITIES: Dict[str, FrozenSet[str]] = {
         {
             "turn.execute",
             "tools.read",
+            "wiki.read",
             "approval.read",
             "audit.read",
             "runs.read",
@@ -29,12 +30,18 @@ _ROLE_CAPABILITIES: Dict[str, FrozenSet[str]] = {
             "chat.sessions.manage",
             "chat.messages.read",
             "chat.messages.send",
+            # Doc-only: maps Anthropic #13 gather/act/verify mental model (see agent-sdk-mental-model-mapping.md).
+            "harness.gather_act_verify",
+            "jobs.read",
+            "jobs.manage",
+            "jobs.trigger",
         }
     ),
     "admin": frozenset(
         {
             "turn.execute",
             "tools.read",
+            "wiki.read",
             "approval.read",
             "approval.decide",
             "audit.read",
@@ -64,12 +71,17 @@ _ROLE_CAPABILITIES: Dict[str, FrozenSet[str]] = {
             "chat.sessions.manage",
             "chat.messages.read",
             "chat.messages.send",
+            "harness.gather_act_verify",
+            "jobs.read",
+            "jobs.manage",
+            "jobs.trigger",
         }
     ),
     "tenant_admin": frozenset(
         {
             "turn.execute",
             "tools.read",
+            "wiki.read",
             "approval.read",
             "approval.decide",
             "audit.read",
@@ -99,12 +111,17 @@ _ROLE_CAPABILITIES: Dict[str, FrozenSet[str]] = {
             "chat.sessions.manage",
             "chat.messages.read",
             "chat.messages.send",
+            "harness.gather_act_verify",
+            "jobs.read",
+            "jobs.manage",
+            "jobs.trigger",
         }
     ),
     "platform_ops": frozenset(
         {
             "turn.execute",
             "tools.read",
+            "wiki.read",
             "approval.read",
             "approval.decide",
             "audit.read",
@@ -136,6 +153,12 @@ _ROLE_CAPABILITIES: Dict[str, FrozenSet[str]] = {
             "chat.sessions.manage",
             "chat.messages.read",
             "chat.messages.send",
+            "harness.gather_act_verify",
+            "jobs.read",
+            "jobs.manage",
+            "jobs.trigger",
+            # Ops: host-local CLI `agentium task-lock` (no stable public HTTP lock API in this milestone).
+            "coordination.task_lock.ops",
         }
     ),
     "guest": frozenset(),

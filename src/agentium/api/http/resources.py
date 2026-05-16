@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+if TYPE_CHECKING:
+    from agentium.app.settings import AppSettings
 
 
 @dataclass
@@ -19,6 +22,7 @@ class HTTPControlPlaneResources:
     notify_bridge: Optional[Any] = None
     task_graph: Optional[Any] = None
     deep_research_pipeline: Optional[Any] = None
+    research_job_service: Optional[Any] = None
     policy_release_manager: Optional[Any] = None
     emergence_guardrails: Optional[Any] = None
     evolution_plugin: Optional[Any] = None
@@ -35,3 +39,11 @@ class HTTPControlPlaneResources:
     domain_packs_root: Optional[Path] = None
     chat_session_store: Optional[Any] = None
     chat_turn_service: Optional[Any] = None
+    chat_memory_lane_router: Optional[Any] = None
+    memory_service: Optional[Any] = None
+    contextual_kb_store: Optional[Any] = None
+    settings: Optional["AppSettings"] = None
+    llm_wiki_service: Optional[Any] = None
+    deferred_task_sink: Optional[Any] = None
+    scheduled_job_store: Optional[Any] = None
+    scheduled_job_runner: Optional[Any] = None

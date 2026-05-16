@@ -28,11 +28,17 @@ class InMemoryBackend:
         tenant_id: str,
         layer: MemoryLayer,
         limit: int = 50,
+        *,
+        run_id_filter: Optional[str] = None,
     ) -> List[MemoryRecord]:
         with self._lock:
             key = (tenant_id, layer)
             records = list(self._records.get(key, []))
-        return records[-limit:]
+        if run_id_filter is not None and str(run_id_filter).strip():
+            rid = str(run_id_filter).strip()
+            records = [r for r in records if str(r.payload.get("run_id") or "").strip() == rid]
+        cap = max(1, int(limit))
+        return records[-cap:]
 
     def purge_tenant(self, tenant_id: str) -> int:
         removed = 0

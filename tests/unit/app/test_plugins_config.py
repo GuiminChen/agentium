@@ -25,6 +25,7 @@ def test_load_plugins_config_minimal(tmp_path: Path) -> None:
     assert cfg.orchestration.backend == "native"
     assert cfg.memory.backend == "memory"
     assert cfg.evolution.plugin == "native"
+    assert cfg.llm_wiki.enabled is False
 
 
 def test_plugins_config_rejects_unknown_root_key(tmp_path: Path) -> None:
@@ -52,5 +53,14 @@ evolution:
     cfg = PluginsConfig.model_validate(yaml.safe_load(raw))
     fp = plugins_fingerprint_payload(cfg)
     assert fp["memory_backend"] == "mem0"
+    assert fp["memory_optional_mem0_lane"] is False
+    assert fp["llm_wiki_enabled"] is False
     assert "MY_SECRET_REF" not in fp.values()
     assert "api_key" not in fp
+
+
+def test_plugins_fingerprint_llm_wiki_gate_flags() -> None:
+    cfg = PluginsConfig()
+    fp = plugins_fingerprint_payload(cfg)
+    assert fp["llm_wiki_search_session_pending_gate"] is True
+    assert fp["llm_wiki_pending_job_gate_ttl_seconds"] == 3600

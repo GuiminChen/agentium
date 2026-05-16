@@ -46,7 +46,11 @@ class McpLoader:
     def register_descriptor(self, descriptor: McpToolDescriptor) -> None:
         """Register one MCP descriptor, enforcing contract validity."""
 
-        assert_contract_valid(descriptor.contract, descriptor.name)
+        assert_contract_valid(
+            descriptor.contract,
+            descriptor.name,
+            min_description_chars=self._registry.tool_contract_min_description_chars,
+        )
         if self._require_signature and not (descriptor.signature_digest or "").strip():
             if self._audit_sink is not None:
                 try:
@@ -75,6 +79,7 @@ class McpLoader:
                 capabilities=descriptor.capabilities,
                 risk_level=descriptor.risk_level,
                 handler=descriptor.handler,
+                supply_origin="mcp",
             )
         )
         self._contracts[scoped_name] = descriptor.contract

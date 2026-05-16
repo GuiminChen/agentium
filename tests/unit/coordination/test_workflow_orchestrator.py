@@ -149,3 +149,44 @@ def test_workflow_registers_parent_child_run(context: RequestContext) -> None:
     assert record is not None
     assert record.parent_run_id == "parent-run"
     assert record.orphan_policy == OrphanPolicy.ADOPT
+
+
+def test_strict_harness_handoff_passes(context: RequestContext) -> None:
+    from agentium.coordination.artifact_store import ArtifactStore
+    from agentium.models.harness_contract import HarnessContract
+
+    store = ArtifactStore()
+    spec = WorkflowSpec(
+        name="wf",
+        nodes=[WorkflowNode(name="one", handler_name="one")],
+        harness_contract=HarnessContract(handoff_artifact_keys=["summary.json"]),
+    )
+    orch = WorkflowOrchestrator(
+        handlers={"one": lambda ctx, inputs: {"summary.json": {"ok": True}}},
+        artifact_store=store,
+        strict_harness_handoff=True,
+    )
+    state = orch.run(context=context, spec=spec)
+    assert state.completed_nodes["one"].status == NodeStatus.COMPLETED
+    assert state.completion_error is None
+
+
+def test_strict_harness_handoff_sets_completion_error(context: RequestContext) -> None:
+    from agentium.coordination.artifact_store import ArtifactStore
+    from agentium.models.harness_contract import HarnessContract
+
+    store = ArtifactStore()
+    spec = WorkflowSpec(
+        name="wf",
+        nodes=[WorkflowNode(name="one", handler_name="one")],
+        harness_contract=HarnessContract(handoff_artifact_keys=["missing.json"]),
+    )
+    orch = WorkflowOrchestrator(
+        handlers={"one": lambda ctx, inputs: {"other": True}},
+        artifact_store=store,
+        strict_harness_handoff=True,
+    )
+    state = orch.run(context=context, spec=spec)
+    assert state.completed_nodes["one"].status == NodeStatus.COMPLETED
+    assert state.completion_error is not None
+    assert "missing.json" in (state.completion_error or "")

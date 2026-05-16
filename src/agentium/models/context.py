@@ -60,6 +60,10 @@ class RequestContext(BaseModel):
         default="direct-tool",
         description="MCP path grade: direct registry tool vs code-exec MCP (PRD §3.9.2).",
     )
+    chat_session_id: Optional[str] = Field(
+        default=None,
+        description="Active chat session id for tools that scope to session uploads (e.g. wiki_search).",
+    )
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

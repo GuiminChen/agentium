@@ -40,9 +40,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "fakeredis>=2.23.0",
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.21.0",
+    "croniter>=2.0.0",
     "black>=23.0.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",
@@ -67,6 +69,15 @@ langgraph = [
 mem0 = [
     "mem0ai>=0.1.0",
 ]
+celery_jobs = [
+    "celery[redis]>=5.3.0",
+    "redis>=5.0.0",
+]
+cron = [
+    "croniter>=2.0.0",
+]
+# Editable install required: pip install -e ./crate (package name ``crate``).
+crate_wiki = []
 [project.urls]
 Homepage = "https://github.com/GuiminChen/agentium"
 Documentation = "https://github.com/GuiminChen/agentium"
@@ -86,6 +97,10 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"agentium.coordination.persona_templates" = ["bundled_roles/**/*"]
+"agentium.governance.abuse_patterns" = ["bundled/*.yaml"]
 
 [tool.black]
 line-length = 88
@@ -119,10 +134,11 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["crate/src", "src"]
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
 markers = [
     "paper: tests referenced by the paper / REPRO bundle (hypotheses H1–H6; see docs/paper/arxiv/six-acceptance-mapping.md)",
     "integration: integration tests (may be slower)",
+    "adversarial_eval: P1-18 adversarial / OOD fixture grading (optional CI job)",
 ]

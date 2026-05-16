@@ -35,6 +35,7 @@ def run_repeated_eval(
     runner: Callable[[int], EvalSample],
     repetitions: int = 5,
     success_threshold: Optional[float] = None,
+    environment_fingerprint: Optional[Dict[str, Any]] = None,
 ) -> EvalReport:
     """Run ``runner`` N times, returning aggregate metrics with CI95.
 
@@ -43,6 +44,8 @@ def run_repeated_eval(
         runner: Callable invoked with the iteration index, returning EvalSample.
         repetitions: Number of repetitions (must be >= 2 for CI).
         success_threshold: Optional threshold; success_rate counts samples >=.
+        environment_fingerprint: When set, copied into every sample's ``metadata`` under
+            ``eval_environment_fingerprint`` for reproducibility reporting.
     """
 
     if repetitions < 1:
@@ -52,7 +55,10 @@ def run_repeated_eval(
         sample = runner(index)
         if not isinstance(sample, EvalSample):
             raise TypeError("runner must return EvalSample")
-        samples.append(sample)
+        md = dict(sample.metadata)
+        if environment_fingerprint is not None:
+            md["eval_environment_fingerprint"] = environment_fingerprint
+        samples.append(EvalSample(score=sample.score, metadata=md))
     scores = [s.score for s in samples]
     mean = sum(scores) / len(scores)
     if len(scores) >= 2:

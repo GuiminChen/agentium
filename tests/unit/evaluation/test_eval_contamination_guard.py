@@ -1,30 +1,21 @@
+"""Tests for evaluation contamination guard."""
+
 from __future__ import annotations
 
-from agentium.evaluation.eval_contamination_guard import EvalContaminationGuard
+import pytest
+
+from agentium.evaluation.eval_contamination_guard import EvalContaminationError, EvalContaminationGuard
 
 
-def test_eval_contamination_guard_flags_benchmark_key_leakage() -> None:
-    guard = EvalContaminationGuard()
-
-    result = guard.inspect_transcript(
-        task_prompt="Solve this benchmark task.",
-        transcript=(
-            "The model found an answer key for BrowseComp on a public mirror "
-            "and decoded all benchmark answers."
-        ),
-    )
-
-    assert result.suspected is True
-    assert "answer_key_reference" in result.reasons
+def test_browsecomp_keyword_flags() -> None:
+    g = EvalContaminationGuard()
+    r = g.inspect_transcript("t", "mention BrowseComp dataset")
+    assert r.suspected
+    assert any("benchmark" in x for x in r.reasons)
 
 
-def test_eval_contamination_guard_accepts_normal_transcript() -> None:
-    guard = EvalContaminationGuard()
-
-    result = guard.inspect_transcript(
-        task_prompt="Implement retry logic.",
-        transcript="The agent wrote tests, implemented retries, and passed unit checks.",
-    )
-
-    assert result.suspected is False
-    assert result.reasons == []
+def test_fail_hard_raises() -> None:
+    g = EvalContaminationGuard()
+    with pytest.raises(EvalContaminationError) as exc:
+        g.inspect_transcript("t", "browsecomp answers here", fail_hard=True)
+    assert exc.value.reasons

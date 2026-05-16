@@ -23,6 +23,7 @@ from agentium.core.scheduler import TimeoutLayers, run_with_timeout
 from agentium.coordination.task_graph import OrphanPolicy, TaskGraphSupervisor
 from agentium.governance.audit_lineage import AuditSink
 from agentium.models.context import AuditRecord, RequestContext
+from agentium.models.harness_contract import HarnessContract
 from agentium.shared.errors import ApprovalRequiredError, PolicyDeniedError
 
 if TYPE_CHECKING:
@@ -83,6 +84,7 @@ class WorkflowSpec(BaseModel):
     timeouts: Optional[TimeoutLayersModel] = None
     parent_run_id: Optional[str] = None
     orphan_policy: OrphanPolicy = OrphanPolicy.FAIL
+    harness_contract: Optional[HarnessContract] = None
 
     class Config:
         extra = "forbid"
@@ -111,6 +113,7 @@ class WorkflowState:
     pending_node: Optional[str] = None
     pending_approval_id: Optional[str] = None
     pending_inputs: Optional[Dict[str, Any]] = None
+    completion_error: Optional[str] = None
 
 
 def _copy_workflow_state(state: WorkflowState) -> WorkflowState:
@@ -124,6 +127,7 @@ def _copy_workflow_state(state: WorkflowState) -> WorkflowState:
         pending_node=state.pending_node,
         pending_approval_id=state.pending_approval_id,
         pending_inputs=dict(state.pending_inputs) if state.pending_inputs else None,
+        completion_error=state.completion_error,
     )
 
 
@@ -139,6 +143,7 @@ class WorkflowOrchestrator:
         node_counter_name: str = "workflow.node_completed",
         task_graph: Optional[TaskGraphSupervisor] = None,
         run_cancel_registry: Optional["RunCancelRegistry"] = None,
+        strict_harness_handoff: bool = False,
     ) -> None:
         self._handlers = handlers
         self._audit_sink = audit_sink
@@ -147,6 +152,7 @@ class WorkflowOrchestrator:
         self._node_counter_name = node_counter_name
         self._task_graph = task_graph
         self._run_cancel_registry = run_cancel_registry
+        self._strict_harness_handoff = strict_harness_handoff
         self._states: Dict[str, WorkflowState] = {}
         self._lock = threading.Lock()
 
@@ -404,6 +410,35 @@ class WorkflowOrchestrator:
                 return state
             inputs = next_inputs
             active_resume = None
+        all_completed = bool(order) and all(
+            state.completed_nodes.get(n) is not None
+            and state.completed_nodes[n].status == NodeStatus.COMPLETED
+            for n in order
+        )
+        if (
+            all_completed
+            and self._strict_harness_handoff
+            and self._artifact_store is not None
+            and spec.harness_contract is not None
+            and spec.harness_contract.handoff_artifact_keys
+        ):
+            from agentium.coordination.harness_handoff import verify_handoff_artifact_keys
+
+            vr = verify_handoff_artifact_keys(
+                self._artifact_store,
+                tenant_id=context.tenant_id,
+                run_id=context.run_id,
+                keys=spec.harness_contract.handoff_artifact_keys,
+            )
+            if not vr.ok:
+                state.completion_error = f"harness_handoff:{','.join(vr.missing_keys)}"
+                self._audit_node(
+                    context,
+                    spec,
+                    order[-1],
+                    "harness_handoff_violation",
+                    {"missing_keys": list(vr.missing_keys)},
+                )
         return state
 
     def _completed_artifact_ids(

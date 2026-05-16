@@ -20,6 +20,7 @@ from agentium.evaluation.release_gates_runner import collect_release_gate_summar
 from agentium.governance.evolution_plugin import TrajectoryBatch, TrajectoryEvent
 from agentium.governance.evolution_trajectory import sanitize_trajectory_batch
 from agentium.models.context import RequestContext
+from agentium.models.harness_contract import HarnessContract
 from agentium.shared.errors import PolicyDeniedError
 
 
@@ -354,3 +355,68 @@ class ResearchEvalWorkflowHandlersMixin:
             return
         snap = pipe.workflow_snapshot_for_http(run_id)
         self._write_json(HTTPStatus.OK, {"run_id": run_id, "workflow": snap})
+
+    def _handle_research_jobs_post(self) -> None:
+        info = self._resolve_identity()
+        if info is None:
+            return
+        if not cap_granted(info.roles, "research.run"):
+            self._write_error(HTTPStatus.FORBIDDEN, "forbidden", "Capability research.run required.")
+            return
+        body = self._read_json_body()
+        if body is None:
+            return
+        query = str(body.get("query", "")).strip()
+        if not query:
+            self._write_error(HTTPStatus.BAD_REQUEST, "missing_query", "Field query is required.")
+            return
+        mw_raw = body.get("max_workers", 2)
+        try:
+            max_workers = int(mw_raw)
+        except (TypeError, ValueError):
+            max_workers = 2
+        harness: HarnessContract | None = None
+        harness_raw = body.get("harness")
+        if isinstance(harness_raw, dict):
+            try:
+                harness = HarnessContract.model_validate(harness_raw)
+            except ValidationError:
+                self._write_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "invalid_harness",
+                    "Field harness is not a valid HarnessContract.",
+                )
+                return
+        svc = self.resources.research_job_service if self.resources else None
+        if svc is None:
+            self._write_error(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "research_jobs_unavailable",
+                "Research job service not configured.",
+            )
+            return
+        rec = svc.create_job(
+            tenant_id=info.tenant_id, query=query, max_workers=max_workers, harness=harness
+        )
+        self._write_json(HTTPStatus.OK, svc.to_http_dict(rec))
+
+    def _handle_research_job_get(self, job_id: str) -> None:
+        info = self._resolve_identity()
+        if info is None:
+            return
+        if not cap_granted(info.roles, "research.run"):
+            self._write_error(HTTPStatus.FORBIDDEN, "forbidden", "Capability research.run required.")
+            return
+        svc = self.resources.research_job_service if self.resources else None
+        if svc is None:
+            self._write_error(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "research_jobs_unavailable",
+                "Research job service not configured.",
+            )
+            return
+        rec = svc.get(tenant_id=info.tenant_id, job_id=job_id)
+        if rec is None:
+            self._write_error(HTTPStatus.NOT_FOUND, "research_job_not_found", "Unknown research job.")
+            return
+        self._write_json(HTTPStatus.OK, svc.to_http_dict(rec))

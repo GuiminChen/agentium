@@ -16,6 +16,8 @@ from agentium.api.http.handlers_approvals_audit import ApprovalsAuditHandlersMix
 from agentium.api.http.handlers_budget_background import BudgetBackgroundHandlersMixin
 from agentium.api.http.handlers_chat import ChatHTTPHandlersMixin, route_chat_dispatch
 from agentium.api.http.handlers_dev_probe import DevProbeHandlersMixin
+from agentium.api.http.handlers_llm_wiki import LlmWikiHandlersMixin
+from agentium.api.http.handlers_kb import KbHandlersMixin
 from agentium.api.http.handlers_governance_domain_pack import (
     GovernanceDomainPackHandlersMixin,
     parse_domain_pack_bundle_path,
@@ -34,6 +36,13 @@ from agentium.api.http.handlers_session_timeline import (
     parse_run_cancel_path,
 )
 from agentium.api.http.handlers_tools_catalog import ToolCatalogHandlersMixin
+from agentium.api.http.handlers_jobs import (
+    ScheduledJobsHandlersMixin,
+    parse_scheduled_job_collection_path,
+    parse_scheduled_job_subresource,
+    parse_scheduled_job_trigger_path,
+    parse_scheduled_job_webhook_path,
+)
 from agentium.api.http.resources import HTTPControlPlaneResources
 from agentium.governance.access_control import IdentityProvider
 from agentium.models.run_manifest import RunManifestPolicy
@@ -58,8 +67,11 @@ class ControlPlaneHTTPRequestHandler(
     DevProbeHandlersMixin,
     SessionCheckpointHandlersMixin,
     SessionTimelineHandlersMixin,
+    ScheduledJobsHandlersMixin,
     ChatHTTPHandlersMixin,
     GovernanceDomainPackHandlersMixin,
+    KbHandlersMixin,
+    LlmWikiHandlersMixin,
     MiscTurnHandlersMixin,
     ToolCatalogHandlersMixin,
     ApprovalsAuditHandlersMixin,
@@ -76,7 +88,29 @@ class ControlPlaneHTTPRequestHandler(
         """Handle HTTP POST endpoints."""
 
         parsed = urlparse(self.path)
+        if parse_scheduled_job_webhook_path(parsed.path):
+            self._handle_jobs_webhook_trigger()
+            return
         if route_chat_dispatch(self, "POST", parsed.path, parsed.query):
+            return
+        if parsed.path.rstrip("/") == "/v1/jobs":
+            self._handle_jobs_create()
+            return
+        trig_job = parse_scheduled_job_trigger_path(parsed.path)
+        if trig_job is not None:
+            self._handle_job_trigger(trig_job)
+            return
+        if parsed.path == "/v1/kb/retrieve":
+            self._kb_retrieve_from_post_body()
+            return
+        if parsed.path == "/v1/wiki/session-uploads":
+            self._handle_wiki_session_upload_post()
+            return
+        if parsed.path == "/v1/wiki/ingest-jobs":
+            self._handle_wiki_ingest_job_post()
+            return
+        if parsed.path == "/v1/research/jobs":
+            self._handle_research_jobs_post()
             return
         if parsed.path == "/v1/research/run":
             self._handle_research_run()
@@ -147,6 +181,17 @@ class ControlPlaneHTTPRequestHandler(
 
         parsed = urlparse(self.path)
         if route_chat_dispatch(self, "GET", parsed.path, parsed.query):
+            return
+        if parse_scheduled_job_collection_path(parsed.path):
+            self._handle_jobs_list(parsed.query)
+            return
+        sj_sub = parse_scheduled_job_subresource(parsed.path)
+        if sj_sub is not None:
+            kind, jid = sj_sub
+            if kind == "job":
+                self._handle_job_get(jid)
+            else:
+                self._handle_job_runs_list(jid, parsed.query)
             return
         if parsed.path in ("/v1/healthz", "/healthz"):
             payload = {"status": "ok"}
@@ -250,6 +295,32 @@ class ControlPlaneHTTPRequestHandler(
         if task_graph_run is not None:
             self._handle_task_graph_get(task_graph_run)
             return
+        if parsed.path == "/v1/kb/retrieve":
+            self._kb_retrieve_from_get(parsed.query)
+            return
+        if parsed.path == "/v1/wiki/ping":
+            self._handle_wiki_ping_get()
+            return
+        if parsed.path == "/v1/wiki/pages":
+            self._handle_wiki_pages_list_get(parsed.query)
+            return
+        if parsed.path == "/v1/wiki/page":
+            self._handle_wiki_page_get(parsed.query)
+            return
+        if parsed.path == "/v1/wiki/graph":
+            self._handle_wiki_graph_get(parsed.query)
+            return
+        wiki_job = self._parse_wiki_ingest_job_id(parsed.path)
+        if wiki_job is not None:
+            self._handle_wiki_ingest_job_get(wiki_job)
+            return
+        if parsed.path == "/v1/wiki/search":
+            self._handle_wiki_search_get(parsed.query)
+            return
+        job_id = self._parse_research_job_detail_path(parsed.path)
+        if job_id is not None:
+            self._handle_research_job_get(job_id)
+            return
         research_run = self._parse_research_get_path(parsed.path)
         if research_run is not None:
             self._handle_research_get(research_run)
@@ -279,6 +350,10 @@ class ControlPlaneHTTPRequestHandler(
         parsed = urlparse(self.path)
         if route_chat_dispatch(self, "PUT", parsed.path, parsed.query):
             return
+        sj_put = parse_scheduled_job_subresource(parsed.path)
+        if sj_put is not None and sj_put[0] == "job":
+            self._handle_job_put(sj_put[1])
+            return
         self._write_error(HTTPStatus.NOT_FOUND, "endpoint_not_found", "Unknown PUT path.")
 
     def do_DELETE(self) -> None:  # noqa: N802
@@ -286,6 +361,10 @@ class ControlPlaneHTTPRequestHandler(
 
         parsed = urlparse(self.path)
         if route_chat_dispatch(self, "DELETE", parsed.path, parsed.query):
+            return
+        sj_del = parse_scheduled_job_subresource(parsed.path)
+        if sj_del is not None and sj_del[0] == "job":
+            self._handle_job_delete(sj_del[1])
             return
         self._write_error(HTTPStatus.NOT_FOUND, "endpoint_not_found", "Unknown DELETE path.")
 

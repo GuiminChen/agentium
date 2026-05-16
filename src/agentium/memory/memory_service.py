@@ -16,7 +16,14 @@ class MemoryBackend(Protocol):
     """Protocol implemented by all memory backends."""
 
     def append(self, record: MemoryRecord) -> None: ...
-    def query(self, tenant_id: str, layer: MemoryLayer, limit: int = 50) -> List[MemoryRecord]: ...
+    def query(
+        self,
+        tenant_id: str,
+        layer: MemoryLayer,
+        limit: int = 50,
+        *,
+        run_id_filter: Optional[str] = None,
+    ) -> List[MemoryRecord]: ...
     def purge_tenant(self, tenant_id: str) -> int: ...
 
 
@@ -64,12 +71,19 @@ class MemoryService:
         layer: MemoryLayer,
         target_tenant_id: Optional[str] = None,
         limit: int = 50,
+        *,
+        run_id_filter: Optional[str] = None,
     ) -> List[MemoryRecord]:
         """Read records for one tenant + layer with a hard tenant check."""
 
         effective_tenant = target_tenant_id or context.tenant_id
         self._assert_same_tenant(context, effective_tenant, action="read")
-        return self._backend.query(tenant_id=effective_tenant, layer=layer, limit=limit)
+        return self._backend.query(
+            tenant_id=effective_tenant,
+            layer=layer,
+            limit=limit,
+            run_id_filter=run_id_filter,
+        )
 
     def purge(self, context: RequestContext, target_tenant_id: Optional[str] = None) -> int:
         """Purge memory for the caller's tenant (or explicit target)."""

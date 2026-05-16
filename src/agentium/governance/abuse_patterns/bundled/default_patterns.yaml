@@ -1,0 +1,9 @@
+patterns:
+  - id: pem_leak_heuristic
+    severity: high
+    mitigation: "Redact tool output; escalate to audit."
+    needle: "BEGIN PRIVATE KEY"
+  - id: aws_key_heuristic
+    severity: high
+    mitigation: "Treat as secret material; deny exfil channels."
+    needle: "AKIA"

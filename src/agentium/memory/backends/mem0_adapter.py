@@ -23,7 +23,7 @@ specific Mem0 client is evaluated against the six acceptance gates.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, List, Protocol, Sequence
+from typing import Any, List, Optional, Protocol, Sequence
 
 from agentium.memory.types import MemoryLayer, MemoryRecord
 
@@ -62,7 +62,9 @@ class Mem0Backend:
 
     The adapter is intentionally minimal; advanced features (similarity
     search, embeddings config, consolidation hooks) belong in the external
-    client rather than in Agentium's governed surface.
+    client rather than in Agentium's governed surface. For native backends,
+    :mod:`agentium.coordination.chat_mid_semantic_memory` performs a
+    Mem0-like LLM extraction pass into MID without embedding fusion.
     """
 
     _NOT_CONFIGURED = (
@@ -96,17 +98,24 @@ class Mem0Backend:
         tenant_id: str,
         layer: MemoryLayer,
         limit: int = 50,
+        *,
+        run_id_filter: Optional[str] = None,
     ) -> List[MemoryRecord]:
         """Delegate to the Mem0 client; translate raw rows back to records."""
 
         client = self._require_client()
         bounded_limit = max(1, int(limit))
+        fetch_cap = bounded_limit * 8 if run_id_filter else bounded_limit
         raw_rows = client.search(
             tenant_id=tenant_id,
             layer=layer.value,
-            limit=bounded_limit,
+            limit=max(bounded_limit, fetch_cap),
         )
-        return [self._row_to_record(row, default_layer=layer) for row in raw_rows]
+        rows = [self._row_to_record(row, default_layer=layer) for row in raw_rows]
+        if run_id_filter is not None and str(run_id_filter).strip():
+            rid = str(run_id_filter).strip()
+            rows = [r for r in rows if str(r.payload.get("run_id") or "").strip() == rid]
+        return rows[-bounded_limit:]
 
     def purge_tenant(self, tenant_id: str) -> int:
         """Delete all Mem0-held records for ``tenant_id``."""

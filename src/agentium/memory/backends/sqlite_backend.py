@@ -7,7 +7,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import List
+from typing import List, Optional
 
 from agentium.memory.types import MemoryLayer, MemoryRecord
 
@@ -64,17 +64,25 @@ class SqliteMemoryBackend:
         tenant_id: str,
         layer: MemoryLayer,
         limit: int = 50,
+        *,
+        run_id_filter: Optional[str] = None,
     ) -> List[MemoryRecord]:
+        bounded = max(1, int(limit))
+        filter_clause = ""
+        params: tuple = (tenant_id, layer.value, bounded)
+        if run_id_filter is not None and str(run_id_filter).strip():
+            filter_clause = " AND json_extract(payload_json, '$.run_id') = ? "
+            params = (tenant_id, layer.value, str(run_id_filter).strip(), bounded)
         with self._lock:
             rows = self._connection.execute(
-                """
+                f"""
                 SELECT tenant_id, layer, key, payload_json, created_at
                 FROM memory_records
-                WHERE tenant_id = ? AND layer = ?
+                WHERE tenant_id = ? AND layer = ? {filter_clause}
                 ORDER BY id DESC
                 LIMIT ?
                 """,
-                (tenant_id, layer.value, max(1, int(limit))),
+                params,
             ).fetchall()
         records: List[MemoryRecord] = []
         for row in rows:
